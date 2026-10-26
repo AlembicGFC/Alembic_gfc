@@ -1,0 +1,1036 @@
+const SUPABASE_URL = 'https://jcsnapkopkeeepugtitf.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_Kk8FjimVFuMeEIfH8Zq_XQ_aQ-rX_Vj';
+const ADMIN_PASSWORD = 'GFC@123';
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let allChildrenCache = [];
+let allStaffCache = [];
+let isAdmin = false;
+let kraCache = {};
+let kpiMasterCache = [];
+let barCharts = {}; // Store chart instances to destroy before re-rendering
+let expandedChartInstance = null; // For popup chart
+
+function escapeHTML(s){return (s==null?'':String(s)).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function fmtDate(d){if(!d)return '–';const dt=new Date(d);return dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}
+function calcAge(dob){if(!dob)return null;const d=new Date(dob),n=new Date();let a=n.getFullYear()-d.getFullYear();const m=n.getMonth()-d.getMonth();if(m<0||(m===0&&n.getDate()<d.getDate()))a--;return a;}
+function calc18(dob){if(!dob)return null;const d=new Date(dob);d.setFullYear(d.getFullYear()+18);return d.toISOString().slice(0,10);}
+function maskAadhar(a){if(!a)return '–';const s=String(a).replace(/\D/g,'');return s.length>=4?'XXXX-XXXX-'+s.slice(-4):a;}
+function maskAcc(a){if(!a)return '–';return String(a).length>=4?'XXXX'+String(a).slice(-4):a;}
+
+function isBirthday(dob) {
+  if (!dob) return false;
+  const d = new Date(dob);
+  const today = new Date();
+  return d.getDate() === today.getDate() && d.getMonth() === today.getMonth();
+}
+
+function getDisplayName(fullName) {
+  if (!fullName) return '–';
+  const parts = fullName.trim().split(' ');
+  const surnames = ['Parmar', 'Prajapati', 'Chauhan', 'Patel', 'Thakor', 'Rathod', 'Bariya', 'Yadav', 'Gaekwad', 'Chunara', 'Valand', 'Rathwa', 'Marwadi', 'Jhankhwadiya', 'Shah', 'Ravat', 'Saiyad', 'Pawar', 'Vaghela', 'Vasava', 'Ninama', 'Chavda', 'Mali'];
+  if (surnames.includes(parts[0]) && parts.length > 1) { return parts[1]; }
+  return parts[0];
+}
+
+function handlePhotoUpload(event, urlInputId, previewId) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      let width = img.width, height = img.height;
+      const max_size = 250;
+      if (width > height) { if (width > max_size) { height *= max_size / width; width = max_size; } }
+      else { if (height > max_size) { width *= max_size / height; height = max_size; } }
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      document.getElementById(urlInputId).value = dataUrl;
+      const preview = document.getElementById(previewId);
+      preview.src = dataUrl; preview.style.display = 'block';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ✅ Perfect Pediatric BMI Calculation (Age & Gender Wise)
+function getPediatricBMI(age, gender, heightCm, weightKg) {
+  if(!heightCm || !weightKg) return { bmi: null, status: 'No Data', color: '#6b7280' };
+  
+  const hM = heightCm / 100;
+  const bmi = weightKg / (hM * hM);
+  
+  const thresholds = {
+    5: { boy: [13.4, 16.6, 18.2], girl: [13.1, 16.7, 18.2] },
+    6: { boy: [13.4, 16.9, 18.5], girl: [13.1, 17.0, 18.8] },
+    7: { boy: [13.5, 17.3, 19.1], girl: [13.1, 17.4, 19.6] },
+    8: { boy: [13.7, 17.9, 20.0], girl: [13.3, 18.0, 20.6] },
+    9: { boy: [14.0, 18.6, 21.0], girl: [13.5, 18.6, 21.6] },
+    10: { boy: [14.4, 19.4, 22.1], girl: [13.7, 19.4, 22.7] },
+    11: { boy: [14.8, 20.2, 23.2], girl: [14.1, 20.2, 23.7] },
+    12: { boy: [15.4, 21.0, 24.4], girl: [14.6, 21.1, 24.8] },
+    13: { boy: [16.0, 21.9, 25.6], girl: [15.2, 22.0, 25.9] },
+    14: { boy: [16.7, 22.7, 26.8], girl: [15.8, 22.8, 26.9] },
+    15: { boy: [17.4, 23.5, 27.9], girl: [16.4, 23.5, 27.9] },
+    16: { boy: [18.2, 24.3, 28.9], girl: [17.0, 24.1, 28.8] },
+    17: { boy: [18.9, 25.0, 29.8], girl: [17.5, 24.6, 29.5] },
+    18: { boy: [19.5, 25.6, 30.5], girl: [18.0, 25.0, 30.1] }
+  };
+
+  let ageInt = parseInt(age) || 0;
+  if (ageInt < 5) ageInt = 5; 
+  if (ageInt > 18) ageInt = 18;
+  
+  const genderKey = (gender && gender.toLowerCase().startsWith('f')) ? 'girl' : 'boy';
+  const limits = thresholds[ageInt][genderKey];
+  
+  let status = 'Normal';
+  let color = '#16a34a';
+  
+  if (bmi < limits[0]) { status = 'Underweight'; color = '#92400e'; }
+  else if (bmi > limits[2]) { status = 'Obese'; color = '#991b1b'; }
+  else if (bmi > limits[1]) { status = 'Overweight'; color = '#9a3412'; }
+  
+  return { bmi: bmi.toFixed(1), status, color };
+}
+
+async function loadData(){
+  const {data: children} = await sb.from('children').select('*');
+  const {data: staff} = await sb.from('staff').select('*');
+  const {count: safetyCount} = await sb.from('safety_incidents').select('*',{count:'exact',head:true});
+  
+  allChildrenCache = children || [];
+  allStaffCache = staff || [];
+
+  const active = allChildrenCache.filter(c=>c.status==='active');
+  const inactive = allChildrenCache.filter(c=>c.status==='inactive');
+  const withSchool = active.filter(c=>c.present_school && c.present_school.trim()!=='');
+  const enrollPct = active.length ? Math.round((withSchool.length/active.length)*100) : 0;
+
+  document.getElementById('kpiActive').textContent = active.length;
+  document.getElementById('kpiEnroll').textContent = enrollPct+'%';
+  document.getElementById('kpiInactive').textContent = inactive.length;
+  document.getElementById('kpiSafety').textContent = safetyCount || 0;
+
+  renderChildTree(active);
+  renderStaffTree(allStaffCache);
+
+  const hwSel = document.getElementById('hwChildSelect');
+  const srSel = document.getElementById('srChildSelect');
+  if(hwSel && srSel) {
+    const opts = '<option value="">-- Select Child --</option>' + allChildrenCache.map(c=>`<option value="${c.id}">${escapeHTML(c.full_name)} (${escapeHTML(c.gfc_id||'No ID')})</option>`).join('');
+    hwSel.innerHTML = opts; srSel.innerHTML = opts;
+  }
+}
+
+async function loadBarCharts(){
+  const fromVal = document.getElementById('reportFromDate').value;
+  const toVal = document.getElementById('reportToDate').value;
+
+  const {data: master} = await sb.from('kra_kpi_master').select('*').order('kpi_code');
+  
+  let dailyQuery = sb.from('kpi_daily').select('*');
+  if(fromVal && toVal){
+    dailyQuery = dailyQuery.gte('entry_date', fromVal).lte('entry_date', toVal);
+  }
+  const {data: daily} = await dailyQuery;
+
+  const kpiAverages = {};
+  (daily||[]).forEach(d => {
+      if(!kpiAverages[d.kpi_code]) kpiAverages[d.kpi_code] = { sum: 0, count: 0 };
+      if(d.rating != null) {
+          kpiAverages[d.kpi_code].sum += parseFloat(d.rating) * 10;
+          kpiAverages[d.kpi_code].count++;
+      }
+  });
+
+  const kras = {};
+  (master||[]).forEach(k=>{
+    if(!kras[k.kra_code]) kras[k.kra_code] = {code:k.kra_code, name:k.kra_name, kpis:[]};
+    kras[k.kra_code].kpis.push(k);
+  });
+
+  const grid = document.getElementById('barChartsGrid');
+  grid.innerHTML = ''; 
+
+  Object.values(barCharts).forEach(c => c.destroy());
+  barCharts = {};
+
+  Object.keys(kras).sort().forEach(code => {
+    const k = kras[code];
+    
+    const div = document.createElement('div');
+    div.className = 'chart-card';
+    // Onclick to expand
+    div.onclick = () => openChartModal(code, kras[code], kpiAverages);
+    
+    div.innerHTML = `<h4 title="${k.name}">${code} — ${k.name}</h4><div class="chart-wrap-sm"><canvas id="chart-${code}"></canvas></div>`;
+    grid.appendChild(div);
+
+    const labels = k.kpis.map(x => x.kpi_code);
+    const dataValues = k.kpis.map(x => {
+      const avgObj = kpiAverages[x.kpi_code];
+      return avgObj && avgObj.count > 0 ? Math.round(avgObj.sum / avgObj.count) : 0;
+    });
+    
+    const bgColors = dataValues.map(v => v >= 85 ? '#16a34a' : v >= 60 ? '#f59e0b' : '#dc2626');
+    const tooltips = k.kpis.map(x => x.kpi_name);
+
+    const ctx = document.getElementById(`chart-${code}`).getContext('2d');
+    barCharts[code] = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{ label: 'Score %', data: dataValues, backgroundColor: bgColors, borderRadius: 3 }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { 
+          legend: { display: false },
+          tooltip: { callbacks: { title: (context) => tooltips[context[0].dataIndex] } }
+        },
+        scales: {
+          y: { beginAtZero: true, max: 100, display: false },
+          x: { ticks: { font: { size: 8 } } }
+        }
+      }
+    });
+  });
+}
+
+// ✅ Function to open Popup (Bada Chart)
+function openChartModal(code, kraData, kpiAverages) {
+  document.getElementById('chartModalTitle').textContent = `🎯 ${code} — ${kraData.name} (Details)`;
+  document.getElementById('chartModal').classList.add('show');
+
+  if (expandedChartInstance) {
+    expandedChartInstance.destroy();
+  }
+
+  const labels = kraData.kpis.map(x => x.kpi_code);
+  const dataValues = kraData.kpis.map(x => {
+    const avgObj = kpiAverages[x.kpi_code];
+    return avgObj && avgObj.count > 0 ? Math.round(avgObj.sum / avgObj.count) : 0;
+  });
+  
+  const bgColors = dataValues.map(v => v >= 85 ? '#16a34a' : v >= 60 ? '#f59e0b' : '#dc2626');
+  const tooltips = kraData.kpis.map(x => x.kpi_name);
+
+  const ctx = document.getElementById('expandedChart').getContext('2d');
+  expandedChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{ label: 'Score %', data: dataValues, backgroundColor: bgColors, borderRadius: 4 }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { 
+        legend: { display: false },
+        tooltip: { callbacks: { title: (context) => tooltips[context[0].dataIndex] } }
+      },
+      scales: {
+        y: { beginAtZero: true, max: 100, ticks: { stepSize: 20 } },
+        x: { ticks: { font: { size: 12 } } }
+      }
+    }
+  });
+}
+
+function closeChartModal() {
+  document.getElementById('chartModal').classList.remove('show');
+}
+
+function renderChildTree(activeChildren){
+  const sorted = activeChildren.slice().sort((a,b) => (calcAge(b.dob) || 0) - (calcAge(a.dob) || 0));
+  document.getElementById('treeCanopy').innerHTML = sorted.map(c => {
+    const isBday = isBirthday(c.dob);
+    return `
+    <div class="tree-node" onclick="openProfile('${c.id}')" title="${escapeHTML(c.full_name)}">
+      ${isBday ? '<div class="bday-emoji">🎂</div><div class="bday-emoji-2">🎉</div>' : ''}
+      <div class="tree-node-photo ${isBday ? 'birthday-photo' : ''}">${c.photo_url ? `<img src="${escapeHTML(c.photo_url)}"/>` : '👦'}</div>
+      <div class="tree-node-name">${escapeHTML(getDisplayName(c.full_name))}</div>
+    </div>
+  `}).join('');
+}
+
+function renderStaffTree(staffList){
+  const activeStaff = staffList.filter(s => s.status === 'active');
+  const sortedStaff = activeStaff.slice().sort((a, b) => (a.serial_no || 999) - (b.serial_no || 999));
+  document.getElementById('staffTreeCanopy').innerHTML = sortedStaff.map(s => {
+    const isBday = isBirthday(s.dob); 
+    return `
+    <div class="tree-node" onclick="openStaffProfile('${s.id}')" title="${escapeHTML(s.full_name)}">
+      ${isBday ? '<div class="bday-emoji">🎂</div><div class="bday-emoji-2">🎉</div>' : ''}
+      <div class="tree-node-photo ${isBday ? 'birthday-photo' : ''}">${s.photo_url ? `<img src="${escapeHTML(s.photo_url)}"/>` : '👨‍🏫'}</div>
+      <div class="tree-node-name staff-name">${escapeHTML(getDisplayName(s.full_name))}</div>
+    </div>
+  `}).join('');
+}
+
+async function openProfile(id){
+  const {data: c} = await sb.from('children').select('*').eq('id', id).single();
+  if(!c) return;
+  
+  document.getElementById('profileModalTitle').textContent = '👤 Child Profile & Growth Monitor';
+  const body = document.getElementById('profileBody');
+  body.innerHTML = `<div style="text-align:center; padding:20px;">Loading...</div>`;
+  document.getElementById('profileModal').classList.add('show');
+
+  const {data: hwData} = await sb.from('height_weight').select('*').eq('child_id', id).order('record_month', {ascending: false});
+  const {data: srData} = await sb.from('school_results').select('*').eq('child_id', id).order('academic_year', {ascending: false});
+
+  const childAge = calcAge(c.dob) || 10; 
+
+  let hwHTML = '<div class="empty" style="padding:10px; font-size:0.8rem;">No growth records found.</div>';
+  if(hwData && hwData.length > 0){
+    hwHTML = `<table class="kpi-table"><thead><tr><th>Month</th><th class="col-num">Height (CM)</th><th class="col-num">Weight (KG)</th><th class="col-num">BMI</th><th>Status</th></tr></thead><tbody>
+      ${hwData.map(h=>{
+        const bmiData = getPediatricBMI(childAge, c.gender, h.height_cm, h.weight_kg);
+        let displayMonth = h.record_month || h.record_date || '–';
+        if(h.record_month && h.record_month.includes('-')) {
+            const parts = h.record_month.split('-');
+            const d = new Date(parts[0], parts[1]-1, 1);
+            displayMonth = d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+        }
+        return `<tr>
+          <td>${displayMonth}</td>
+          <td class="col-num">${h.height_cm||'–'}</td>
+          <td class="col-num">${h.weight_kg||'–'}</td>
+          <td class="col-num"><b>${bmiData.bmi || '–'}</b></td>
+          <td><span class="badge" style="background:${bmiData.color}20;color:${bmiData.color};border:1px solid ${bmiData.color}40;">${bmiData.status}</span></td>
+        </tr>`;
+      }).join('')}
+    </tbody></table>`;
+  }
+
+  let srHTML = '<div class="empty" style="padding:10px; font-size:0.8rem;">No school records found.</div>';
+  if(srData && srData.length > 0){
+    srHTML = `<table class="kpi-table"><thead><tr><th>Year</th><th>STD</th><th>School</th><th class="col-num">Marks</th><th class="col-num">%</th><th>Result</th></tr></thead><tbody>
+      ${srData.map(s=>`<tr><td><b>${escapeHTML(s.academic_year)}</b></td><td>${escapeHTML(s.standard||'')}</td><td>${escapeHTML(s.school_name||'')}</td><td class="col-num">${s.obtained_marks||''}/${s.total_marks||''}</td><td class="col-num">${escapeHTML(s.percentage||'')}</td><td><span class="badge ${s.pass_fail==='Pass'?'active':'inactive'}">${escapeHTML(s.pass_fail||'')}</span></td></tr>`).join('')}
+    </tbody></table>`;
+  }
+
+  const birthdayBanner = isBirthday(c.dob) 
+    ? `<div class="birthday-banner">🎉 Happy Birthday ${escapeHTML(getDisplayName(c.full_name))}! 🎂</div>` 
+    : '';
+
+  body.innerHTML = `
+    ${birthdayBanner}
+    <div class="profile-header-bg">
+      <div class="profile-avatar">${c.photo_url ? `<img src="${escapeHTML(c.photo_url)}"/>` : '👦'}</div>
+      <div>
+        <div style="font-size:1.3rem;font-weight:800">${escapeHTML(c.full_name)}</div>
+        <div style="font-size:.85rem;color:#475569">${escapeHTML(c.gfc_id||'–')} • Class ${escapeHTML(c.current_class||'–')} • Age ${childAge}</div>
+      </div>
+    </div>
+    
+    <div class="profile-section">
+      <h4>Basic Information</h4>
+      <div class="profile-grid">
+        <div class="profile-item"><span class="pl">Serial No</span><span class="pv">${escapeHTML(c.serial_no||'–')}</span></div>
+        <div class="profile-item"><span class="pl">GFC ID</span><span class="pv">${escapeHTML(c.gfc_id||'–')}</span></div>
+        <div class="profile-item"><span class="pl">Child Type</span><span class="pv">${escapeHTML(c.child_type||'–')}</span></div>
+        <div class="profile-item"><span class="pl">Gender</span><span class="pv">${escapeHTML(c.gender||'–')}</span></div>
+        <div class="profile-item"><span class="pl">DOB</span><span class="pv">${fmtDate(c.dob)}</span></div>
+        <div class="profile-item"><span class="pl">Age</span><span class="pv">${childAge} Years</span></div>
+        <div class="profile-item"><span class="pl">Blood Group</span><span class="pv">${escapeHTML(c.blood_group||'–')}</span></div>
+        <div class="profile-item"><span class="pl">Date of 18 Completed</span><span class="pv">${fmtDate(c.date_18_completed)}</span></div>
+      </div>
+    </div>
+
+    <div class="profile-section">
+      <h4>CWC & Important Dates</h4>
+      <div class="profile-grid">
+        <div class="profile-item"><span class="pl">CWC Order Date</span><span class="pv">${fmtDate(c.cwc_order_date)}</span></div>
+        <div class="profile-item"><span class="pl">GFC Join Date</span><span class="pv">${fmtDate(c.gfc_join_date)}</span></div>
+        <div class="profile-item"><span class="pl">Foster Benefit Date</span><span class="pv">${fmtDate(c.foster_care_benefit_date)}</span></div>
+        <div class="profile-item"><span class="pl">CWC Leave Order</span><span class="pv">${fmtDate(c.cwc_leave_order_date)}</span></div>
+      </div>
+    </div>
+
+    <div class="profile-section">
+      <h4>ID & Bank Details</h4>
+      <div class="profile-grid">
+        <div class="profile-item"><span class="pl">Aadhar Card</span><span class="pv">${maskAadhar(c.aadhar_card)}</span></div>
+        <div class="profile-item"><span class="pl">Account Holder Name</span><span class="pv">${escapeHTML(c.account_holder_name||'–')}</span></div>
+        <div class="profile-item"><span class="pl">Bank Name</span><span class="pv">${escapeHTML(c.bank_name||'–')}</span></div>
+        <div class="profile-item"><span class="pl">Branch Name</span><span class="pv">${escapeHTML(c.branch_name||'–')}</span></div>
+        <div class="profile-item"><span class="pl">Account Number</span><span class="pv">${maskAcc(c.account_number)}</span></div>
+        <div class="profile-item"><span class="pl">IFSC Code</span><span class="pv">${escapeHTML(c.ifsc_code||'–')}</span></div>
+      </div>
+    </div>
+
+    <div class="profile-section">
+      <h4>Guardian & Education</h4>
+      <div class="profile-grid">
+        <div class="profile-item"><span class="pl">Guardian Name</span><span class="pv">${escapeHTML(c.guardian_name||'–')}</span></div>
+        <div class="profile-item"><span class="pl">Relation</span><span class="pv">${escapeHTML(c.relation||'–')}</span></div>
+        <div class="profile-item"><span class="pl">Contact No</span><span class="pv">${escapeHTML(c.contact_no||'–')}</span></div>
+        <div class="profile-item"><span class="pl">Previous CCI</span><span class="pv">${escapeHTML(c.previous_cci||'–')}</span></div>
+        <div class="profile-item"><span class="pl">Present School</span><span class="pv">${escapeHTML(c.present_school||'–')}</span></div>
+        <div class="profile-item"><span class="pl">Current Class</span><span class="pv">${escapeHTML(c.current_class||'–')}</span></div>
+        <div class="profile-item" style="grid-column: 1 / -1;"><span class="pl">Full Address</span><span class="pv">${escapeHTML(c.full_address||'–')}</span></div>
+        <div class="profile-item" style="grid-column: 1 / -1;"><span class="pl">School Remark</span><span class="pv">${escapeHTML(c.school_remark||'–')}</span></div>
+      </div>
+    </div>
+    
+    <div class="profile-section">
+      <h4>Status</h4>
+      <div class="profile-grid">
+        <div class="profile-item"><span class="pl">Current Status</span><span class="pv"><span class="badge ${c.status}">${c.status.toUpperCase()}</span></span></div>
+      </div>
+    </div>
+
+    <div class="profile-section"><h4>Growth Monitor (Pediatric BMI)</h4><div class="kpi-table-wrapper">${hwHTML}</div></div>
+    <div class="profile-section"><h4>Academic History</h4><div class="kpi-table-wrapper">${srHTML}</div></div>
+  `;
+}
+
+function openStaffProfile(id){
+  const s = allStaffCache.find(x => x.id === id);
+  if(!s) return;
+  document.getElementById('profileModalTitle').textContent = '👨‍🏫 Staff Profile';
+  const body = document.getElementById('profileBody');
+  
+  const birthdayBanner = isBirthday(s.dob) 
+    ? `<div class="birthday-banner">🎉 Happy Birthday ${escapeHTML(getDisplayName(s.full_name))}! 🎂</div>` 
+    : '';
+
+  body.innerHTML = `
+    ${birthdayBanner}
+    <div class="profile-header-bg" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);">
+      <div class="profile-avatar">${s.photo_url ? `<img src="${escapeHTML(s.photo_url)}"/>` : '👨‍🏫'}</div>
+      <div>
+        <div style="font-size:1.3rem;font-weight:800">${escapeHTML(s.full_name)}</div>
+        <div style="font-size:.85rem;color:#166534">${escapeHTML(s.role||'Staff')} • ${escapeHTML(s.shift_timing||'Shift')}</div>
+      </div>
+    </div>
+    
+    <div class="profile-section">
+      <h4>Staff Details</h4>
+      <div class="profile-grid">
+        <div class="profile-item"><span class="pl">Serial No.</span><span class="pv">${escapeHTML(s.serial_no||'–')}</span></div>
+        <div class="profile-item"><span class="pl">Role</span><span class="pv">${escapeHTML(s.role||'–')}</span></div>
+        <div class="profile-item"><span class="pl">Gender</span><span class="pv">${escapeHTML(s.gender||'–')}</span></div>
+        <div class="profile-item"><span class="pl">DOB</span><span class="pv">${fmtDate(s.dob)}</span></div>
+        <div class="profile-item"><span class="pl">Shift Timing</span><span class="pv">${escapeHTML(s.shift_timing||'–')}</span></div>
+        <div class="profile-item"><span class="pl">Joining Date</span><span class="pv">${fmtDate(s.join_date)}</span></div>
+        <div class="profile-item"><span class="pl">Contact No</span><span class="pv">${escapeHTML(s.contact_no||'–')}</span></div>
+        <div class="profile-item" style="grid-column: 1 / -1;"><span class="pl">Address</span><span class="pv">${escapeHTML(s.address||'–')}</span></div>
+      </div>
+    </div>
+
+    <div class="profile-section">
+      <h4>Bank Details & Status</h4>
+      <div class="profile-grid">
+        <div class="profile-item"><span class="pl">Bank Name</span><span class="pv">${escapeHTML(s.bank_name||'–')}</span></div>
+        <div class="profile-item"><span class="pl">Account No</span><span class="pv">${maskAcc(s.account_no)}</span></div>
+        <div class="profile-item"><span class="pl">IFSC Code</span><span class="pv">${escapeHTML(s.ifsc_code||'–')}</span></div>
+        <div class="profile-item"><span class="pl">Status</span><span class="pv"><span class="badge ${s.status}">${s.status.toUpperCase()}</span></span></div>
+      </div>
+    </div>
+  `;
+  document.getElementById('profileModal').classList.add('show');
+}
+
+function showKraDetails(kraCode) {
+  const kra = kraCache[kraCode];
+  if(!kra) return;
+  
+  document.getElementById('profileModalTitle').textContent = '🎯 ' + kra.code + ' — ' + kra.name + ' (Details)';
+  const body = document.getElementById('profileBody');
+  
+  let html = `<div class="profile-header-bg">
+      <div>
+        <div style="font-size:1.3rem;font-weight:800">${kra.code} — ${escapeHTML(kra.name)}</div>
+        <div style="font-size:.85rem;color:#475569">Priority: P${kra.priority} • ${kra.kpis.length} KPIs tracked</div>
+      </div>
+    </div>`;
+    
+  html += `<table class="kpi-table"><thead><tr><th>Code</th><th>KPI Name</th><th>Latest Score</th><th>Status</th></tr></thead><tbody>`;
+  
+  kra.kpis.forEach(k => {
+    const latest = kra.latest[k.kpi_code];
+    const val = latest ? parseFloat(latest.rating) * 10 : null;
+    const pillCls = val !== null ? (val >= 85 ? 'pill-good' : val >= 60 ? 'pill-warn' : 'pill-bad') : 'pill-nodata';
+    const statusText = val !== null ? (val >= 85 ? '🟢 Good' : val >= 60 ? '🟡 Average' : '🔴 Poor') : '⚪ No Data';
+    const displayVal = val !== null ? Math.round(val) + '%' : '—';
+    
+    html += `<tr>
+      <td class="col-code">${k.kpi_code}</td>
+      <td class="col-name">${escapeHTML(k.kpi_name)}</td>
+      <td class="col-num"><span class="kpi-score-pill ${pillCls}">${displayVal}</span></td>
+      <td>${statusText}</td>
+    </tr>`;
+  });
+  
+  html += `</tbody></table>`;
+  
+  body.innerHTML = html;
+  document.getElementById('profileModal').classList.add('show');
+}
+
+function closeProfile(){document.getElementById('profileModal').classList.remove('show');}
+
+async function saveHW(){
+  const child_id = document.getElementById('hwChildSelect').value;
+  let monthInput = document.getElementById('hwMonth').value; 
+  const h = document.getElementById('hwHeight').value;
+  const w = document.getElementById('hwWeight').value;
+  
+  if(!child_id || !monthInput) { alert('❌ Select child and Month/Year'); return; }
+
+  if (monthInput.length === 7) {
+      monthInput = monthInput + '-01';
+  }
+
+  const {error} = await sb.from('height_weight').upsert(
+    { child_id, record_month: monthInput, height_cm: h||null, weight_kg: w||null },
+    { onConflict: 'child_id,record_month' }
+  );
+  
+  if(error){ alert('❌ '+error.message); return; }
+  alert('✅ Monthly Growth record saved successfully!');
+  document.getElementById('hwHeight').value = '';
+  document.getElementById('hwWeight').value = '';
+}
+
+async function saveSR(){
+  const child_id = document.getElementById('srChildSelect').value;
+  const year = document.getElementById('srYear').value.trim();
+  if(!child_id || !year) { alert('❌ Select child and Academic Year'); return; }
+
+  const payload = {
+    child_id, academic_year: year,
+    standard: document.getElementById('srStd').value,
+    school_name: document.getElementById('srSchool').value,
+    obtained_marks: document.getElementById('srObtained').value || null,
+    total_marks: document.getElementById('srTotal').value || null,
+    percentage: document.getElementById('srPerc').value,
+    pass_fail: document.getElementById('srPass').value
+  };
+  const {error} = await sb.from('school_results').upsert(payload, { onConflict: 'child_id,academic_year' });
+  if(error){ alert('❌ '+error.message); return; }
+  alert('✅ School result saved successfully!');
+}
+
+/* ============ EASY RATING BUTTONS ============ */
+function getRatingLabel(r){
+  const labels = {
+    '1':'❌ Critical (10%)','2':'❌ Very Poor (20%)','3':'⚠ Poor (30%)','4':'⚠ Below Avg (40%)',
+    '5':'➖ Average (50%)','6':'👍 Above Avg (60%)','7':'👍 Good (70%)',
+    '8':'✅ Very Good (80%)','9':'⭐ Excellent (90%)','10':'⭐ Excellent (100%)'
+  };
+  return labels[String(r)] || '';
+}
+
+function renderKpiRatingButtons(){
+  const container = document.getElementById('kpiRatingButtons');
+  if(!container) return;
+  let html = '';
+  for(let i = 10; i >= 1; i--){
+    const cls = i >= 8 ? 'g' : i >= 5 ? 'o' : 'r';
+    html += `<button type="button" class="rate-btn ${cls}" data-r="${i}" onclick="selectKpiRating(${i}, this)" title="${getRatingLabel(i)}">${i}</button>`;
+  }
+  container.innerHTML = html;
+}
+
+function selectKpiRating(rating, btn){
+  document.getElementById('kpiValue').value = rating;
+  document.querySelectorAll('#kpiRatingButtons .rate-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  const preview = document.getElementById('kpiRatingPreview');
+  preview.textContent = 'Selected: ' + rating + '/10  =  ' + getRatingLabel(rating);
+  preview.classList.add('active');
+  preview.style.color = rating >= 8 ? '#16a34a' : rating >= 5 ? '#f59e0b' : '#dc2626';
+}
+
+function resetKpiRating(){
+  const hidden = document.getElementById('kpiValue');
+  if(hidden) hidden.value = '';
+  document.querySelectorAll('#kpiRatingButtons .rate-btn').forEach(b => b.classList.remove('selected'));
+  const preview = document.getElementById('kpiRatingPreview');
+  if(preview){
+    preview.textContent = 'No rating selected';
+    preview.classList.remove('active');
+    preview.style.color = 'var(--muted)';
+  }
+}
+
+async function saveKpiEntry(){
+  const code = document.getElementById('kpiSelect').value;
+  const dateInput = document.getElementById('kpiDate').value;
+  const rating = document.getElementById('kpiValue').value;
+  const notes = document.getElementById('kpiNotes').value.trim();
+  if(!code || !dateInput || !rating){ alert('❌ KPI, Date and Rating required'); return; }
+  
+  const {error} = await sb.from('kpi_daily').upsert(
+    {kpi_code: code, entry_date: dateInput, rating: parseInt(rating), notes: notes || null},
+    {onConflict: 'kpi_code,entry_date'}
+  );
+  
+  if(error){ alert('❌ '+error.message); return; }
+  alert('✅ Daily Rating saved successfully!');
+  resetKpiRating();  
+  document.getElementById('kpiNotes').value='';
+  loadKraCards();
+  loadBarCharts();
+}
+
+/* ============ REPORT FILTER (From/To Date) ============ */
+function applyReportFilter(){
+  const from = document.getElementById('reportFromDate').value;
+  const to = document.getElementById('reportToDate').value;
+  if(from && to && new Date(from) > new Date(to)){
+    alert('⚠️ From Date cannot be greater than To Date');
+    return;
+  }
+  loadBarCharts();
+  loadKraCards();
+}
+
+function resetReportFilter(){
+  const to = new Date();
+  const from = new Date(); from.setMonth(from.getMonth() - 3);
+  const fromEl = document.getElementById('reportFromDate');
+  const toEl = document.getElementById('reportToDate');
+  if(fromEl) fromEl.value = from.toISOString().slice(0,10);
+  if(toEl) toEl.value = to.toISOString().slice(0,10);
+  applyReportFilter();
+}
+
+const authBtn = document.getElementById('authBtn');
+authBtn.addEventListener('click', ()=>{
+  if(isAdmin){ logout(); return; }
+  document.getElementById('loginModal').classList.add('show');
+  document.getElementById('passwordInput').value='';
+  document.getElementById('loginErr').style.display='none';
+});
+function closeLogin(){document.getElementById('loginModal').classList.remove('show');}
+function doLogin(){
+  if(document.getElementById('passwordInput').value === ADMIN_PASSWORD){
+    closeLogin(); enterAdmin();
+  } else { document.getElementById('loginErr').style.display='block'; }
+}
+document.getElementById('passwordInput').addEventListener('keydown', e=>{if(e.key==='Enter')doLogin();});
+
+function enterAdmin(){
+  isAdmin = true;
+  authBtn.textContent = '🚪 Logout';
+  document.getElementById('publicView').style.display='none';
+  document.getElementById('adminView').style.display='block';
+  loadAdminTables();
+  document.getElementById('kpiDate').value = new Date().toISOString().slice(0,10);
+}
+function logout(){
+  isAdmin = false;
+  authBtn.textContent = '🔒 Admin Login';
+  document.getElementById('adminView').style.display='none';
+  document.getElementById('publicView').style.display='block';
+  loadData(); loadBarCharts(); loadKraCards();
+}
+
+async function loadAdminTables(){
+  const {data: children} = await sb.from('children').select('*').order('serial_no',{ascending:true,nullsFirst:false});
+  document.getElementById('adminTableBody').innerHTML = (children||[]).map(c=>`
+    <tr>
+      <td>${c.serial_no||'–'}</td><td><b>${escapeHTML(c.gfc_id||'–')}</b></td><td>${escapeHTML(c.full_name)}</td><td>${calcAge(c.dob)||'–'}</td>
+      <td><span class="badge ${c.status}">${c.status.toUpperCase()}</span></td>
+      <td>
+        <button class="btn btn-primary btn-sm" onclick='editChildById("${c.id}")'>✏️ Edit</button>
+        <button class="btn btn-ok btn-sm" onclick="toggleChildStatus('${c.id}','${c.status}')">${c.status==='active'?'⏸ Inactive':'▶ Active'}</button>
+      </td>
+    </tr>`).join('') || '<tr><td colspan="6" class="empty">No records yet.</td></tr>';
+
+  const {data: staff} = await sb.from('staff').select('*').order('serial_no',{ascending:true,nullsFirst:false});
+  document.getElementById('adminStaffTableBody').innerHTML = (staff||[]).map(s=>`
+    <tr>
+      <td>${s.serial_no||'–'}</td><td><b>${escapeHTML(s.full_name)}</b></td><td>${escapeHTML(s.role||'–')}</td><td>${escapeHTML(s.shift_timing||'–')}</td><td>${fmtDate(s.join_date)}</td>
+      <td><span class="badge ${s.status}">${s.status.toUpperCase()}</span></td>
+      <td>
+        <button class="btn btn-primary btn-sm" onclick='editStaffById("${s.id}")'>✏️ Edit</button>
+        <button class="btn btn-ok btn-sm" onclick="toggleStaffStatus('${s.id}','${s.status}')">${s.status==='active'?'⏸ Inactive':'▶ Active'}</button>
+      </td>
+    </tr>`).join('') || '<tr><td colspan="7" class="empty">No staff records yet.</td></tr>';
+}
+
+function openForm(){ resetForm(); document.getElementById('formTitle').textContent='➕ Add New Child'; document.getElementById('formModal').classList.add('show'); }
+function closeForm(){ document.getElementById('formModal').classList.remove('show'); }
+
+function resetForm(){
+  ['fSerialNo','fGfcId','fPhotoUrl','fFirstName','fFatherName','fLastName','fChildType','fGender','fDob','fAge','fBloodGroup','f18',
+   'fCwcOrder','fGfcJoin','fFosterBenefit','fCwcLeave','fAadhar','fAccHolder','fBank',
+   'fBranch','fAccNo','fIfsc','fGuardian','fRelation','fContact','fAddress','fPrevCci','fPresentSchool',
+   'fCurrentClass','fSchoolRemark'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+  document.getElementById('fPhotoUpload').value = '';
+  document.getElementById('fPhotoPreview').style.display = 'none';
+  document.getElementById('fStatus').value='active';
+  document.getElementById('editId').value='';
+}
+
+async function editChildById(id){
+  const {data, error} = await sb.from('children').select('*').eq('id', id).single();
+  if(error || !data){ alert('❌ Not found'); return; }
+  resetForm();
+  document.getElementById('editId').value = data.id;
+  
+  let parts = (data.full_name || '').trim().split(' ');
+  const surnames = ['Parmar', 'Prajapati', 'Chauhan', 'Patel', 'Thakor', 'Rathod', 'Bariya', 'Yadav', 'Gaekwad', 'Chunara', 'Valand', 'Rathwa', 'Marwadi', 'Jhankhwadiya', 'Shah', 'Ravat', 'Saiyad', 'Pawar', 'Vaghela', 'Vasava', 'Ninama', 'Chavda', 'Mali'];
+  if(surnames.includes(parts[0]) && parts.length > 1) {
+    const temp = parts[0]; parts[0] = parts[1]; parts[1] = temp;
+  }
+  document.getElementById('fFirstName').value = parts[0] || '';
+  document.getElementById('fFatherName').value = parts[1] || '';
+  document.getElementById('fLastName').value = parts.slice(2).join(' ') || '';
+
+  const fields = { fSerialNo:'serial_no', fGfcId:'gfc_id', fPhotoUrl:'photo_url', fChildType:'child_type', fGender:'gender',
+                   fDob:'dob', fAge:'age', fBloodGroup:'blood_group', f18:'date_18_completed', fCwcOrder:'cwc_order_date',
+                   fGfcJoin:'gfc_join_date', fFosterBenefit:'foster_care_benefit_date', fCwcLeave:'cwc_leave_order_date',
+                   fAadhar:'aadhar_card', fAccHolder:'account_holder_name', fBank:'bank_name',
+                   fBranch:'branch_name', fAccNo:'account_number', fIfsc:'ifsc_code', fGuardian:'guardian_name', fRelation:'relation',
+                   fContact:'contact_no', fAddress:'full_address', fPrevCci:'previous_cci', fPresentSchool:'present_school',
+                   fCurrentClass:'current_class', fSchoolRemark:'school_remark', fStatus:'status' };
+  for(let k in fields){ if(document.getElementById(k)) document.getElementById(k).value = data[fields[k]] || ''; }
+  
+  document.getElementById('fDob').value = data.dob || '';
+  document.getElementById('fAge').value = calcAge(data.dob) || '';
+  document.getElementById('f18').value = calc18(data.dob) || '';
+  
+  if (data.photo_url) {
+    const preview = document.getElementById('fPhotoPreview');
+    preview.src = data.photo_url; preview.style.display = 'block';
+  }
+  document.getElementById('formTitle').textContent = '✏️ Edit Child – '+data.full_name;
+  document.getElementById('formModal').classList.add('show');
+}
+
+document.getElementById('fDob').addEventListener('change', e=>{
+  const dob = e.target.value;
+  document.getElementById('fAge').value = calcAge(dob) || '';
+  document.getElementById('f18').value = calc18(dob) || '';
+});
+
+async function saveChild(){
+  const btn = document.getElementById('saveChildBtn');
+  btn.textContent = '⏳ Saving...'; btn.disabled = true;
+
+  const fName = document.getElementById('fFirstName').value.trim();
+  const mName = document.getElementById('fFatherName').value.trim();
+  const lName = document.getElementById('fLastName').value.trim();
+  const fullName = [fName, mName, lName].filter(Boolean).join(' ');
+
+  if(!fName){ alert('❌ First Name is required'); btn.textContent = '💾 Save Child'; btn.disabled = false; return; }
+
+  const id = document.getElementById('editId').value;
+  const payload = {
+    serial_no: document.getElementById('fSerialNo').value || null, 
+    gfc_id: document.getElementById('fGfcId').value.trim() || null,
+    photo_url: document.getElementById('fPhotoUrl').value || null, 
+    full_name: fullName,
+    child_type: document.getElementById('fChildType').value.trim() || null, 
+    gender: document.getElementById('fGender').value,
+    dob: document.getElementById('fDob').value || null, 
+    age: document.getElementById('fAge').value || null,
+    blood_group: document.getElementById('fBloodGroup').value || null, 
+    date_18_completed: document.getElementById('f18').value || null,
+    cwc_order_date: document.getElementById('fCwcOrder').value || null, 
+    gfc_join_date: document.getElementById('fGfcJoin').value || null,
+    foster_care_benefit_date: document.getElementById('fFosterBenefit').value || null, 
+    cwc_leave_order_date: document.getElementById('fCwcLeave').value || null,
+    aadhar_card: document.getElementById('fAadhar').value.trim() || null, 
+    account_holder_name: document.getElementById('fAccHolder').value.trim() || null,
+    bank_name: document.getElementById('fBank').value.trim() || null, 
+    branch_name: document.getElementById('fBranch').value.trim() || null,
+    account_number: document.getElementById('fAccNo').value.trim() || null, 
+    ifsc_code: document.getElementById('fIfsc').value.trim() || null,
+    guardian_name: document.getElementById('fGuardian').value.trim() || null, 
+    relation: document.getElementById('fRelation').value.trim() || null,
+    contact_no: document.getElementById('fContact').value.trim() || null, 
+    full_address: document.getElementById('fAddress').value.trim() || null,
+    previous_cci: document.getElementById('fPrevCci').value.trim() || null, 
+    present_school: document.getElementById('fPresentSchool').value.trim() || null,
+    current_class: document.getElementById('fCurrentClass').value.trim() || null, 
+    school_remark: document.getElementById('fSchoolRemark').value.trim() || null,
+    status: document.getElementById('fStatus').value
+  };
+  
+  try {
+    let res;
+    if(id) res = await sb.from('children').update(payload).eq('id', id);
+    else res = await sb.from('children').insert(payload);
+    
+    if(res.error) throw new Error(res.error.message);
+    
+    alert('✅ Child Data Saved Successfully!');
+    closeForm(); loadAdminTables(); loadData(); loadBarCharts();
+  } catch (err) {
+    alert('❌ Save Failed!\n\nError: ' + err.message);
+  } finally {
+    btn.textContent = '💾 Save Child'; btn.disabled = false;
+  }
+}
+
+async function toggleChildStatus(id, current){
+  const {error} = await sb.from('children').update({status:current==='active'?'inactive':'active'}).eq('id', id);
+  if(error){ alert('❌ '+error.message); return; }
+  alert('✅ Status updated'); loadAdminTables(); loadData(); loadBarCharts();
+}
+
+function openStaffForm(){ resetStaffForm(); document.getElementById('staffFormTitle').textContent='➕ Add New Staff'; document.getElementById('staffModal').classList.add('show'); }
+function closeStaffForm(){ document.getElementById('staffModal').classList.remove('show'); }
+
+function resetStaffForm(){
+  ['sSerialNo','sName','sPhotoUrl','sRole','sGender','sDob','sShift','sJoinDate','sContact','sAddress','sBank','sAccNo','sIfsc'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+  document.getElementById('sPhotoUpload').value = '';
+  document.getElementById('sPhotoPreview').style.display = 'none';
+  document.getElementById('sStatus').value='active';
+  document.getElementById('editStaffId').value='';
+}
+
+async function editStaffById(id){
+  const {data, error} = await sb.from('staff').select('*').eq('id', id).single();
+  if(error || !data){ alert('❌ Not found'); return; }
+  resetStaffForm();
+  document.getElementById('editStaffId').value = data.id;
+  document.getElementById('sSerialNo').value = data.serial_no||'';
+  document.getElementById('sName').value = data.full_name||'';
+  document.getElementById('sPhotoUrl').value = data.photo_url||'';
+  document.getElementById('sRole').value = data.role||'';
+  document.getElementById('sGender').value = data.gender||'Male';
+  document.getElementById('sDob').value = data.dob||'';
+  document.getElementById('sShift').value = data.shift_timing||'';
+  document.getElementById('sJoinDate').value = data.join_date||'';
+  document.getElementById('sContact').value = data.contact_no||'';
+  document.getElementById('sAddress').value = data.address||'';
+  document.getElementById('sBank').value = data.bank_name||'';
+  document.getElementById('sAccNo').value = data.account_no||'';
+  document.getElementById('sIfsc').value = data.ifsc_code||'';
+  document.getElementById('sStatus').value = data.status||'active';
+  
+  if (data.photo_url) {
+    const preview = document.getElementById('sPhotoPreview');
+    preview.src = data.photo_url; preview.style.display = 'block';
+  }
+  document.getElementById('staffFormTitle').textContent = '✏️ Edit Staff – '+data.full_name;
+  document.getElementById('staffModal').classList.add('show');
+}
+
+async function saveStaff(){
+  const btn = document.getElementById('saveStaffBtn');
+  btn.textContent = '⏳ Saving...'; btn.disabled = true;
+
+  const id = document.getElementById('editStaffId').value;
+  const payload = {
+    serial_no: document.getElementById('sSerialNo').value || null,
+    full_name: document.getElementById('sName').value.trim(),
+    photo_url: document.getElementById('sPhotoUrl').value || null,
+    role: document.getElementById('sRole').value.trim() || null,
+    gender: document.getElementById('sGender').value,
+    dob: document.getElementById('sDob').value || null,
+    shift_timing: document.getElementById('sShift').value.trim() || null,
+    join_date: document.getElementById('sJoinDate').value || null,
+    contact_no: document.getElementById('sContact').value.trim() || null,
+    address: document.getElementById('sAddress').value.trim() || null,
+    bank_name: document.getElementById('sBank').value.trim() || null,
+    account_no: document.getElementById('sAccNo').value.trim() || null,
+    ifsc_code: document.getElementById('sIfsc').value.trim() || null,
+    status: document.getElementById('sStatus').value
+  };
+  
+  if(!payload.full_name){ alert('❌ Name is required'); btn.textContent = '💾 Save Staff'; btn.disabled = false; return; }
+
+  try {
+    let res;
+    if(id) res = await sb.from('staff').update(payload).eq('id', id);
+    else res = await sb.from('staff').insert(payload);
+    
+    if(res.error) throw new Error(res.error.message);
+    
+    alert('✅ Staff Data Saved Successfully!');
+    closeStaffForm(); loadAdminTables(); loadData();
+  } catch (err) {
+    alert('❌ Save Failed!\n\nError: ' + err.message);
+  } finally {
+    btn.textContent = '💾 Save Staff'; btn.disabled = false;
+  }
+}
+
+async function toggleStaffStatus(id, current){
+  const {error} = await sb.from('staff').update({status:current==='active'?'inactive':'active'}).eq('id', id);
+  if(error){ alert('❌ '+error.message); return; }
+  alert('✅ Status updated'); loadAdminTables(); loadData();
+}
+
+async function loadKraCards(){
+  const fromVal = document.getElementById('reportFromDate').value;
+  const toVal = document.getElementById('reportToDate').value;
+
+  const {data:master} = await sb.from('kra_kpi_master').select('*').order('kpi_code');
+  
+  let dailyQuery = sb.from('kpi_daily').select('*');
+  if(fromVal && toVal){
+    dailyQuery = dailyQuery.gte('entry_date', fromVal).lte('entry_date', toVal);
+  }
+  const {data:daily} = await dailyQuery;
+  
+  kpiMasterCache = master || [];
+
+  const kras = {};
+  (master||[]).forEach(k=>{
+    if(!kras[k.kra_code]) kras[k.kra_code] = {code:k.kra_code,name:k.kra_name,priority:k.priority,kpis:[]};
+    kras[k.kra_code].kpis.push(k);
+  });
+
+  const kpiAverages = {};
+  (daily||[]).forEach(d => {
+      if(!kpiAverages[d.kpi_code]) kpiAverages[d.kpi_code] = { sum: 0, count: 0 };
+      if(d.rating != null) {
+          kpiAverages[d.kpi_code].sum += parseFloat(d.rating) * 10;
+          kpiAverages[d.kpi_code].count++;
+      }
+  });
+
+  Object.values(kras).forEach(kra=>{
+    let sum=0,count=0;
+    kra.kpis.forEach(k=>{
+      const avgObj = kpiAverages[k.kpi_code];
+      if(avgObj && avgObj.count > 0){
+        sum += (avgObj.sum / avgObj.count);
+        count++;
+      }
+    });
+    kra.score = count>0 ? Math.round(sum/count) : null;
+    kra.latest = {};
+    kra.kpis.forEach(k => {
+        const avgObj = kpiAverages[k.kpi_code];
+        if(avgObj) kra.latest[k.kpi_code] = { rating: (avgObj.sum / avgObj.count) / 10 };
+    });
+  });
+
+  kraCache = kras;
+  const grid = document.getElementById('kraGrid');
+  if(!grid) return;
+  
+  grid.innerHTML = Object.keys(kras).sort().map(code=>{
+    const k = kras[code];
+    const score = k.score != null ? k.score : 0;
+    const color = score >= 85 ? '#16a34a' : score >= 60 ? '#f59e0b' : '#dc2626';
+    return `<div class="kra-card" onclick="showKraDetails('${code}')">
+        <div class="kra-code">${code} · P${k.priority}</div>
+        <div class="kra-name">${escapeHTML(k.name)}</div>
+        <div class="kra-score" style="color:${color}">${k.score!=null ? k.score+'%' : '—'}</div>
+        <div class="kra-bar-bg"><div class="kra-bar-fill" style="width:${score}%;background:${color}"></div></div>
+        <div class="kra-sub">${k.kpis.length} KPIs tracked</div>
+      </div>`;
+  }).join('');
+
+  const sel = document.getElementById('kpiSelect');
+  if(sel) sel.innerHTML = '<option value="">-- Select KPI --</option>' + kpiMasterCache.map(k=>
+    `<option value="${k.kpi_code}">${k.kpi_code} — ${escapeHTML(k.kpi_name)} [${escapeHTML(k.kra_code)}]</option>`
+  ).join('');
+}
+
+/* ============ SMART PRINT LOGIC ============ */
+function openPrintModal() {
+  document.getElementById('printModal').classList.add('show');
+}
+function closePrintModal() {
+  document.getElementById('printModal').classList.remove('show');
+}
+
+function executePrint() {
+  const printArea = document.getElementById('printArea');
+  printArea.innerHTML = ''; 
+
+  const selectedKras = Array.from(document.querySelectorAll('.print-kra:checked')).map(cb => cb.value);
+  const childOption = document.querySelector('input[name="printChild"]:checked').value;
+  const staffOption = document.querySelector('input[name="printStaff"]:checked').value;
+
+  let html = `<div class="print-title">Alembic GFC Report</div>`;
+  html += `<p style="text-align:center; margin-bottom: 20px;">Date: ${new Date().toLocaleDateString()}</p>`;
+
+  if (selectedKras.length > 0) {
+    html += `<h3 style="margin-bottom: 15px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">KRA Performance Overview</h3>`;
+    html += `<div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">`;
+    selectedKras.forEach(code => {
+      const k = kraCache[code];
+      if(k) {
+        const score = k.score != null ? k.score : 0;
+        html += `
+          <div class="print-kpi-item" style="border: 1px solid #000; padding: 10px; border-radius: 8px; min-width: 150px;">
+            <div style="font-size: 10px; font-weight: bold; color: #555;">${k.code} - P${k.priority}</div>
+            <div style="font-size: 14px; font-weight: bold; margin: 5px 0;">${escapeHTML(k.name)}</div>
+            <div style="font-size: 20px; font-weight: bold;">${score}%</div>
+            <div style="font-size: 10px;">${k.kpis.length} KPIs tracked</div>
+          </div>
+        `;
+      }
+    });
+    html += `</div>`;
+  }
+
+  if (childOption !== 'none') {
+    const active = allChildrenCache.filter(c=>c.status==='active');
+    html += `<h3 style="margin-top: 30px; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Children List</h3>`;
+    html += `<table class="print-table"><thead><tr>`;
+    
+    if (childOption === 'full') {
+      html += `<th>Sr</th><th>GFC ID</th><th>Name</th><th>Age</th><th>Gender</th><th>Guardian</th><th>School</th><th>Status</th>`;
+    } else {
+      html += `<th>Sr</th><th>Name</th><th>Age</th>`;
+    }
+    html += `</tr></thead><tbody>`;
+
+    active.forEach((c, index) => {
+      html += `<tr>`;
+      if (childOption === 'full') {
+        html += `<td>${index+1}</td><td>${escapeHTML(c.gfc_id||'–')}</td><td>${escapeHTML(c.full_name)}</td><td>${calcAge(c.dob)||'–'}</td><td>${escapeHTML(c.gender||'–')}</td><td>${escapeHTML(c.guardian_name||'–')}</td><td>${escapeHTML(c.present_school||'–')}</td><td>${c.status.toUpperCase()}</td>`;
+      } else {
+        html += `<td>${index+1}</td><td>${escapeHTML(c.full_name)}</td><td>${calcAge(c.dob)||'–'}</td>`;
+      }
+      html += `</tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+
+  if (staffOption !== 'none') {
+    const activeStaff = allStaffCache.filter(s => s.status === 'active');
+    html += `<h3 style="margin-top: 30px; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Staff List</h3>`;
+    html += `<table class="print-table"><thead><tr><th>Sr</th><th>Name</th><th>Role</th><th>Shift</th><th>Contact</th></tr></thead><tbody>`;
+    activeStaff.forEach((s, index) => {
+      html += `<tr><td>${index+1}</td><td>${escapeHTML(s.full_name)}</td><td>${escapeHTML(s.role||'–')}</td><td>${escapeHTML(s.shift_timing||'–')}</td><td>${escapeHTML(s.contact_no||'–')}</td></tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+
+  printArea.innerHTML = html;
+  closePrintModal();
+
+  setTimeout(() => {
+    window.print();
+  }, 300);
+}
+
+/* ============ INIT ============ */
+(async ()=>{
+  renderKpiRatingButtons();
+  
+  const to = new Date();
+  const from = new Date(); from.setMonth(from.getMonth() - 3);
+  const fromEl = document.getElementById('reportFromDate');
+  const toEl = document.getElementById('reportToDate');
+  if(fromEl) fromEl.value = from.toISOString().slice(0,10);
+  if(toEl) toEl.value = to.toISOString().slice(0,10);
+  
+  await loadData();
+  await loadBarCharts();
+  await loadKraCards();
+})();
