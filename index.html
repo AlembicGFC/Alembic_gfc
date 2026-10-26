@@ -163,26 +163,41 @@ tr:last-child td{border-bottom:0}
 .print-section label { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; margin-bottom: 8px; cursor: pointer; }
 .print-section input[type="checkbox"], .print-section input[type="radio"] { cursor: pointer; width: 16px; height: 16px; accent-color: var(--brand); }
 
-/* ============ PRINT STYLING (FIXED) ============ */
+/* ============ PERFECT PRINT STYLING (NO EXTRA PAGES) ============ */
 @media print {
-  body * {
-    visibility: hidden;
+  /* Pura page setup reset karein */
+  @page {
+    margin: 10mm;
   }
-  #printArea, #printArea * {
-    visibility: visible;
-  }
-  #printArea {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    display: block !important;
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-  .no-print, header, .admin-header-bar, .btn, .entry-form-card, .guide-box, .chart-grid, .tree-wrapper, .kra-grid, .modal {
+  
+  /* Screen par jo bhi dikh raha hai, usko hide karne ke bajaye screen se hata dein */
+  body > *:not(#printArea) {
     display: none !important;
   }
+  
+  /* Sirf Print Area ko dikhayein */
+  #printArea {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  /* Print Area ke andar ka content */
+  #printArea * {
+    visibility: visible !important;
+  }
+
+  /* Background colors aur shadows hata dein */
+  body, html {
+    background: #fff !important;
+    height: auto !important;
+    overflow: hidden !important;
+  }
+  
+  /* Tables ka design */
   .print-table {
     width: 100%;
     border-collapse: collapse;
@@ -193,7 +208,12 @@ tr:last-child td{border-bottom:0}
     border: 1px solid #000;
     padding: 8px;
     text-align: left;
+    page-break-inside: avoid;
   }
+  .print-table tr {
+    page-break-inside: avoid;
+  }
+
   .print-title {
     text-align: center;
     margin-bottom: 20px;
@@ -646,7 +666,7 @@ tr:last-child td{border-bottom:0}
     </div>
     <div class="modal-body" id="profileBody"></div>
     <div class="modal-footer">
-      <button class="btn btn-primary" onclick="window.print()">🖨️ Print Profile</button>
+      <button class="btn btn-primary" onclick="printSelectedProfile()">🖨️ Print Profile</button>
       <button class="btn btn-light" onclick="closeProfile()">Close</button>
     </div>
   </div>
@@ -758,31 +778,44 @@ function getPediatricBMI(age, gender, heightCm, weightKg) {
 }
 
 async function loadData(){
-  const {data: children} = await sb.from('children').select('*');
-  const {data: staff} = await sb.from('staff').select('*');
-  const {count: safetyCount} = await sb.from('safety_incidents').select('*',{count:'exact',head:true});
+  // 1. Supabase se data fetch karein (Error handling ke sath)
+  const { data: children, error: childErr } = await sb.from('children').select('*');
+  const { data: staff, error: staffErr } = await sb.from('staff').select('*');
+  const { count: safetyCount } = await sb.from('safety_incidents').select('*',{count:'exact',head:true});
   
+  if (childErr) console.error("Error loading children:", childErr);
+  if (staffErr) console.error("Error loading staff:", staffErr);
+
   allChildrenCache = children || [];
   allStaffCache = staff || [];
 
-  const active = allChildrenCache.filter(c=>c.status==='active');
-  const inactive = allChildrenCache.filter(c=>c.status==='inactive');
-  const withSchool = active.filter(c=>c.present_school && c.present_school.trim()!=='');
-  const enrollPct = active.length ? Math.round((withSchool.length/active.length)*100) : 0;
+  // 2. Dashboard KPI Calculation
+  const active = allChildrenCache.filter(c => c.status && c.status.toLowerCase() === 'active');
+  const inactive = allChildrenCache.filter(c => c.status && c.status.toLowerCase() === 'inactive');
+  
+  // School Enrollment calculation
+  const withSchool = active.filter(c => c.present_school && c.present_school.trim() !== '');
+  const enrollPct = active.length ? Math.round((withSchool.length / active.length) * 100) : 0;
 
+  // DOM me values update karein
   document.getElementById('kpiActive').textContent = active.length;
-  document.getElementById('kpiEnroll').textContent = enrollPct+'%';
+  document.getElementById('kpiEnroll').textContent = enrollPct + '%';
   document.getElementById('kpiInactive').textContent = inactive.length;
   document.getElementById('kpiSafety').textContent = safetyCount || 0;
 
+  // 3. Trees Render karein
   renderChildTree(active);
   renderStaffTree(allStaffCache);
 
+  // 4. Dropdowns me data bharein
   const hwSel = document.getElementById('hwChildSelect');
   const srSel = document.getElementById('srChildSelect');
   if(hwSel && srSel) {
-    const opts = '<option value="">-- Select Child --</option>' + allChildrenCache.map(c=>`<option value="${c.id}">${escapeHTML(c.full_name)} (${escapeHTML(c.gfc_id||'No ID')})</option>`).join('');
-    hwSel.innerHTML = opts; srSel.innerHTML = opts;
+    const opts = '<option value="">-- Select Child --</option>' + allChildrenCache.map(c => 
+      `<option value="${c.id}">${escapeHTML(c.full_name)} (${escapeHTML(c.gfc_id||'No ID')})</option>`
+    ).join('');
+    hwSel.innerHTML = opts; 
+    srSel.innerHTML = opts;
   }
 }
 
@@ -922,13 +955,31 @@ function renderChildTree(activeChildren){
 function renderStaffTree(staffList){
   const activeStaff = staffList.filter(s => s.status === 'active');
   const sortedStaff = activeStaff.slice().sort((a, b) => (a.serial_no || 999) - (b.serial_no || 999));
+  
   document.getElementById('staffTreeCanopy').innerHTML = sortedStaff.map(s => {
     const isBday = isBirthday(s.dob); 
+    
     return `
-    <div class="tree-node" onclick="openStaffProfile('${s.id}')" title="${escapeHTML(s.full_name)}">
+    <div class="tree-node" onclick="openStaffProfile('${s.id}')" title="${escapeHTML(s.full_name)} - ${escapeHTML(s.role)}">
       ${isBday ? '<div class="bday-emoji">🎂</div><div class="bday-emoji-2">🎉</div>' : ''}
-      <div class="tree-node-photo ${isBday ? 'birthday-photo' : ''}">${s.photo_url ? `<img src="${escapeHTML(s.photo_url)}"/>` : '👨‍🏫'}</div>
-      <div class="tree-node-name staff-name">${escapeHTML(getDisplayName(s.full_name))}</div>
+      <div class="tree-node-photo ${isBday ? 'birthday-photo' : ''}">
+        ${s.photo_url ? `<img src="${escapeHTML(s.photo_url)}"/>` : '👨‍🏫'}
+      </div>
+      
+      <!-- Naam aur Designation Center Align -->
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; width: 100%; margin-top: 8px;">
+        
+        <!-- Staff Name -->
+        <div class="tree-node-name staff-name" style="line-height: 1.2; margin-bottom: 4px; white-space: normal; padding: 0 5px;">
+          ${escapeHTML(s.full_name || 'Staff')}
+        </div>
+        
+        <!-- Staff Designation / Role -->
+        <div style="font-size: 0.68rem; color: #166534; font-weight: 700; line-height: 1.3; padding: 0 5px; width: 100%; word-wrap: break-word;">
+          ${escapeHTML(s.role || '').replace(/\n/g, '<br>')}
+        </div>
+        
+      </div>
     </div>
   `}).join('');
 }
@@ -1436,6 +1487,28 @@ async function saveChild(){
   }
 }
 
+function printSelectedProfile() {
+  const modalBox = document.querySelector('.modal.show .modal-box');
+  if(!modalBox) return;
+
+  // Print area me modal ka HTML copy karein
+  const printArea = document.getElementById('printArea');
+  printArea.innerHTML = modalBox.innerHTML;
+
+  // Print Area ke andar se faltu cheezein (buttons, close icon) hata dein
+  const btns = printArea.querySelectorAll('.btn, .modal-close, .modal-header');
+  btns.forEach(b => b.remove());
+
+  printArea.style.display = 'block';
+
+  // Thoda wait karke print kholen
+  setTimeout(() => {
+    window.print();
+    // Print ke baad printArea wapas khali kar dein
+    setTimeout(() => { printArea.style.display = 'none'; printArea.innerHTML = ''; }, 500);
+  }, 300);
+}
+
 async function toggleChildStatus(id, current){
   const {error} = await sb.from('children').update({status:current==='active'?'inactive':'active'}).eq('id', id);
   if(error){ alert('❌ '+error.message); return; }
@@ -1613,8 +1686,18 @@ function executePrint() {
   const childStatusOpt = document.querySelector('input[name="printChildStatus"]:checked').value;
   const staffOption = document.querySelector('input[name="printStaff"]:checked').value;
 
+  // Date Range fetch karein
+  const fromDate = document.getElementById('reportFromDate').value;
+  const toDate = document.getElementById('reportToDate').value;
+  
+  // Date format change karein (DD-MM-YYYY)
+  const formatDate = (d) => { if(!d) return '–'; const dt = new Date(d); return dt.toLocaleDateString('en-GB'); };
+  
   let html = `<div class="print-title">Alembic GFC Report</div>`;
-  html += `<p style="text-align:center; margin-bottom: 20px;">Date: ${new Date().toLocaleDateString()}</p>`;
+  html += `<div style="text-align:center; margin-bottom: 20px; font-size: 14px;">
+             <b>Report Period:</b> ${formatDate(fromDate)} to ${formatDate(toDate)} <br>
+             <small style="color:#555;">Generated on: ${new Date().toLocaleDateString('en-GB')}</small>
+           </div>`;
 
   // 1. KRA Cards
   if (selectedKras.length > 0) {
@@ -1635,7 +1718,7 @@ function executePrint() {
     html += `</div>`;
   }
 
-  // 2. Children List (Dynamic Columns)
+  // 2. Children List
   if (selectedChildOpts.length > 0) {
     let children = allChildrenCache;
     if (childStatusOpt === 'active') children = children.filter(c => c.status === 'active');
@@ -1644,7 +1727,6 @@ function executePrint() {
     html += `<h3 style="margin-top: 30px; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Children List (${childStatusOpt.toUpperCase()})</h3>`;
     html += `<table class="print-table"><thead><tr>`;
     
-    // Headers
     if (selectedChildOpts.includes('basic')) html += `<th>Sr</th><th>GFC ID</th><th>Name</th><th>Age</th><th>Gender</th>`;
     if (selectedChildOpts.includes('school')) html += `<th>School</th><th>Class</th>`;
     if (selectedChildOpts.includes('guardian')) html += `<th>Guardian</th><th>Contact</th>`;
@@ -1652,7 +1734,6 @@ function executePrint() {
     if (selectedChildOpts.includes('aadhar')) html += `<th>Aadhar</th>`;
     html += `</tr></thead><tbody>`;
 
-    // Data Rows
     children.forEach((c, index) => {
       html += `<tr>`;
       if (selectedChildOpts.includes('basic')) html += `<td>${index+1}</td><td>${escapeHTML(c.gfc_id||'–')}</td><td>${escapeHTML(c.full_name)}</td><td>${calcAge(c.dob)||'–'}</td><td>${escapeHTML(c.gender||'–')}</td>`;
@@ -1679,27 +1760,35 @@ function executePrint() {
   printArea.innerHTML = html;
   closePrintModal();
 
-  // Thoda wait karein taaki DOM render ho jaye, fir print kholen
   setTimeout(() => {
     window.print();
   }, 300);
 }
 
 /* ============ INIT ============ */
-(async ()=>{
-  renderKpiRatingButtons();
-  
-  const to = new Date();
-  const from = new Date(); from.setMonth(from.getMonth() - 3);
-  const fromEl = document.getElementById('reportFromDate');
-  const toEl = document.getElementById('reportToDate');
-  if(fromEl) fromEl.value = from.toISOString().slice(0,10);
-  if(toEl) toEl.value = to.toISOString().slice(0,10);
-  
-  await loadData();
-  await loadBarCharts();
-  await loadKraCards();
-})();
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    // Pehle default date set karein
+    const to = new Date();
+    const from = new Date(); from.setMonth(from.getMonth() - 3);
+    const fromEl = document.getElementById('reportFromDate');
+    const toEl = document.getElementById('reportToDate');
+    if(fromEl) fromEl.value = from.toISOString().slice(0,10);
+    if(toEl) toEl.value = to.toISOString().slice(0,10);
+
+    // Fir data load karein
+    renderKpiRatingButtons();
+    await loadData();
+    
+    // Agar Supabase load ho gaya hai toh charts load karein
+    if (typeof sb !== 'undefined') {
+      await loadBarCharts();
+      await loadKraCards();
+    }
+  } catch (err) {
+    console.error("Initialization Error:", err);
+  }
+});
 </script>
 </body>
 </html>
