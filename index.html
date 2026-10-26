@@ -813,15 +813,19 @@ async function loadData(){
   // 4. Dropdowns me data bharein
   const hwSel = document.getElementById('hwChildSelect');
   const srSel = document.getElementById('srChildSelect');
-  if(hwSel && srSel) {
-    const opts = '<option value="">-- Select Child --</option>' + allChildrenCache.map(c => 
+
+        if(hwSel && srSel) {
+    // Sirf Active bachcho ko filter karein
+    const activeChildren = allChildrenCache.filter(c => c.status && c.status.toLowerCase() === 'active');
+    
+    const opts = '<option value="">-- Select Child --</option>' + activeChildren.map(c => 
       `<option value="${c.id}">${escapeHTML(c.full_name)} (${escapeHTML(c.gfc_id||'No ID')})</option>`
     ).join('');
+    
     hwSel.innerHTML = opts; 
     srSel.innerHTML = opts;
   }
 }
-
 async function loadBarCharts(){
   const fromVal = document.getElementById('reportFromDate').value;
   const toVal = document.getElementById('reportToDate').value;
