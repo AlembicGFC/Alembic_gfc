@@ -1137,6 +1137,10 @@ function executeExcel() {
   link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); document.getElementById('printModal').classList.remove('show');
 }
 
+function openPrintModal() {
+  document.getElementById('printModal').classList.add('show');
+}
+
 function printSelectedProfile() {
   // Default dates set karo (Aaj se pichle 3 saal)
   const today = new Date().toISOString().slice(0,10);
