@@ -485,6 +485,39 @@ tr:last-child td{border-bottom:0}
   </div>
 </div>
 
+<!-- PRINT MODAL -->
+<div class="modal" id="printModal">
+  <div class="modal-box modal-large" style="max-width: 700px;">
+    <div class="modal-header"><h3>🖨️ Print / Export Report</h3><button class="modal-close" onclick="document.getElementById('printModal').classList.remove('show')">×</button></div>
+    <div class="modal-body">
+      <div class="print-options-grid" style="grid-template-columns: 1fr 1fr;">
+        <div class="print-section">
+          <h5>👦 Children List Details</h5>
+          <label><input type="checkbox" class="print-child-opt" value="basic" checked> Basic Info (ID, Name, Age, Gender)</label>
+          <label><input type="checkbox" class="print-child-opt" value="school"> School Info (School, Class)</label>
+          <label><input type="checkbox" class="print-child-opt" value="guardian"> Guardian Info (Name, Contact, Address)</label>
+          <label><input type="checkbox" class="print-child-opt" value="bank"> Bank Details (Bank, Acc No, IFSC)</label>
+          <label><input type="checkbox" class="print-child-opt" value="aadhar"> Aadhar Card No</label>
+          <hr style="margin: 10px 0; border-color: #e5e7eb;">
+          <label><input type="radio" name="printChildStatus" value="active" checked> Only Active Children</label>
+          <label><input type="radio" name="printChildStatus" value="inactive"> Only Inactive Children</label>
+          <label><input type="radio" name="printChildStatus" value="all"> All Children</label>
+        </div>
+        <div class="print-section">
+          <h5>👨‍🏫 Staff List</h5>
+          <label><input type="radio" name="printStaff" value="full" checked> Full Details (Table)</label>
+          <label><input type="radio" name="printStaff" value="none"> Don't Print</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" style="background:#e5e7eb;color:#374151" onclick="document.getElementById('printModal').classList.remove('show')">Cancel</button>
+      <button class="btn btn-ok" onclick="executeExcel()">📊 Download Excel (CSV)</button>
+      <button class="btn btn-primary" onclick="executePrint()">🖨️ Print Now</button>
+    </div>
+  </div>
+</div>
+
 <!-- Hidden Print Area -->
 <div id="printArea" style="display:none; padding: 20px; background: white;"></div>
 
