@@ -1,768 +1,1678 @@
 <!DOCTYPE html>
 <html lang="en">
-<style>
-@media print {
-  @page {
-    size: A4 landscape;
-    margin: 8mm;
-  }
-
-  #printArea,
-  #printArea * {
-    visibility: visible !important;
-  }
-
-  #printArea {
-    position: static !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  .print-table {
-    width: 100% !important;
-    border-collapse: collapse !important;
-    font-size: 9px !important;
-  }
-
-  .print-table th,
-  .print-table td {
-    padding: 4px 5px !important;
-    border: 1px solid #000 !important;
-    word-break: break-word !important;
-    overflow-wrap: anywhere !important;
-    white-space: normal !important;
-    vertical-align: top !important;
-  }
-}
-</style>
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Alembic GFC – Group Foster Care Management</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<style>
-:root{--brand:#0b5ed7;--brand-dark:#083b8f;--bg:#f4f6fb;--card:#fff;--text:#1a1a2e;--muted:#6b7280;--ok:#16a34a;--warn:#f59e0b;--danger:#dc2626;--border:#e5e7eb}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-header{background:linear-gradient(135deg,var(--brand),var(--brand-dark));color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.15);position:sticky;top:0;z-index:50;flex-wrap:wrap;gap:10px}
-.brand{display:flex;align-items:center;gap:12px;font-weight:700;font-size:1.05rem}
-.btn{border:0;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:600;font-size:.9rem;transition:.15s;font-family:inherit}
-.btn-light{background:#fff;color:var(--brand)} .btn-light:hover{background:#eef2ff}
-.btn-primary{background:var(--brand);color:#fff} .btn-primary:hover{background:var(--brand-dark)}
-.btn-ok{background:var(--ok);color:#fff} .btn-danger{background:var(--danger);color:#fff}
-.btn-sm{padding:5px 10px;font-size:.78rem}
-.container{max-width:1280px;margin:0 auto;padding:22px}
-.section-title{font-size:1.15rem;font-weight:700;margin:8px 0 14px}
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:26px}
-.kpi{background:var(--card);border-radius:14px;padding:18px;box-shadow:0 2px 10px rgba(0,0,0,.06);border-left:5px solid var(--brand)}
-.kpi.green{border-color:var(--ok)} .kpi.orange{border-color:var(--warn)} .kpi.red{border-color:var(--danger)} .kpi.blue{border-color:#3b82f6}
-.kpi .label{font-size:.85rem;color:var(--muted);font-weight:600}
-.kpi .value{font-size:2rem;font-weight:800;margin-top:6px}
-.kpi .sub{font-size:.75rem;color:var(--muted);margin-top:2px}
-#adminView{display:none}
-.admin-header-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px}
-.table-wrap{overflow-x:auto;background:var(--card);border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.06);margin-bottom:20px;}
-table{width:100%;border-collapse:collapse}
-th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--border);font-size:.88rem;white-space:nowrap}
-th{background:#f8fafc;font-size:.75rem;text-transform:uppercase;color:var(--muted);font-weight:700}
-tr:last-child td{border-bottom:0}
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700}
-.badge.active{background:#dcfce7;color:#166534}
-.badge.inactive{background:#fee2e2;color:#991b1b}
-.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;align-items:center;justify-content:center;padding:16px}
-.modal.show{display:flex}
-.modal-box{background:#fff;border-radius:16px;max-width:420px;width:100%;padding:26px}
-.modal-box h3{margin-bottom:16px}
-.modal-box input{width:100%;padding:11px 14px;border-radius:9px;border:1px solid var(--border);font-size:1rem;margin-bottom:14px;outline:none}
-.modal-large{max-width:960px;max-height:92vh;padding:0;display:flex;flex-direction:column}
-.modal-header{padding:16px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
-.modal-close{background:none;border:0;font-size:1.7rem;cursor:pointer;color:var(--muted)}
-.modal-body{padding:18px 22px;overflow-y:auto;flex:1}
-.modal-footer{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;flex-shrink:0;background:#fafbfc}
-.form-section{margin:18px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--brand);color:var(--brand);font-size:.82rem;font-weight:800;text-transform:uppercase;}
-.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
-.form-grid label{display:block;font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:4px}
-.form-grid input,.form-grid select,.form-grid textarea{width:100%;padding:9px 11px;border-radius:8px;border:1px solid var(--border);font-size:.9rem;outline:none;font-family:inherit}
-.form-grid input:focus,.form-grid select:focus,.form-grid textarea:focus{border-color:var(--brand);box-shadow:0 0 0 2px rgba(11,94,215,.1)}
-.form-grid input[readonly]{background:#f8fafc;color:var(--muted);}
-.full-width{grid-column:1/-1}
-.img-preview{max-height:50px;margin-top:5px;border-radius:6px;display:none;border:1px solid var(--border);}
-.tab-container{margin-bottom:20px;}
-.tab-buttons{display:flex;gap:5px;border-bottom:2px solid var(--border);margin-bottom:15px;overflow-x:auto;padding-bottom:5px;}
-.tab-btn{padding:8px 16px;background:#f1f5f9;border:none;border-radius:8px 8px 0 0;cursor:pointer;font-weight:600;color:var(--muted);white-space:nowrap;}
-.tab-btn.active{background:var(--brand);color:#fff;}
-.tab-content{display:none;background:#fff;padding:20px;border-radius:0 0 12px 12px;box-shadow:0 2px 10px rgba(0,0,0,.05);}
-.tab-content.active{display:block;}
-.subject-row{display:flex;gap:10px;margin-bottom:8px;align-items:center;}
-.subject-row input{flex:1;}
-.btn-remove-sub{background:#ef4444;color:#fff;border:none;border-radius:6px;padding:8px 12px;cursor:pointer;}
-.filter-bar{background:#fff;padding:15px;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.05);display:flex;gap:15px;flex-wrap:wrap;align-items:end;margin-bottom:16px;}
-.filter-group{display:flex;flex-direction:column;gap:5px;}
-.filter-group label{font-size:0.75rem;font-weight:700;color:var(--muted);}
-.filter-group select,.filter-group input{padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:0.85rem;}
-.dashboard-split{display:grid;grid-template-columns:270px 1fr;gap:18px;align-items:start;margin-bottom:26px;}
-.dashboard-list-card{background:var(--card);border-radius:14px;padding:12px;box-shadow:0 2px 10px rgba(0,0,0,.06);border-top:4px solid var(--brand);display:flex;flex-direction:column;gap:8px;max-height:360px;overflow-y:auto;}
-.dashboard-list-title{font-size:0.78rem;font-weight:700;text-transform:uppercase;color:var(--muted);padding:2px 6px;}
-.dashboard-list-items{display:flex;flex-direction:column;gap:6px;}
-.dashboard-list-btn{width:100%;text-align:left;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:#f8fafc;color:var(--text);font-weight:600;font-size:.86rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:.15s;font-family:inherit;}
-.dashboard-list-btn:hover{background:#eef2ff;border-color:#bfdbfe;}
-.dashboard-list-btn.active{background:#eff6ff;border-color:var(--brand);color:var(--brand);font-weight:700;}
-.dashboard-list-count{font-size:.74rem;padding:2px 7px;border-radius:999px;background:#e2e8f0;color:#334155;}
-.dashboard-list-btn.active .dashboard-list-count{background:#dbeafe;color:var(--brand-dark);}
-.dashboard-chart-panel{background:var(--card);border-radius:14px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.06);border-top:4px solid var(--brand);min-height:320px;}
-.chart-grid{width:100%;}
-.chart-card{background:transparent;border-radius:10px;padding:4px;}
-.chart-card h4{font-size:.95rem;margin-bottom:12px;color:var(--brand);font-weight:700;}
-.chart-wrap-lg{position:relative;height:280px;width:100%;}
-@media (max-width:768px){.dashboard-split{grid-template-columns:1fr;}}
-.profile-header-bg{background:linear-gradient(135deg,#eef2ff,#dbeafe);padding:16px 22px;border-radius:12px;margin-bottom:18px;display:flex;gap:14px;align-items:center}
-.profile-avatar{width:60px;height:60px;border-radius:50%;background:#fff;display:grid;place-items:center;font-size:2rem;overflow:hidden}
-.profile-avatar img{width:100%;height:100%;object-fit:cover}
-.profile-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
-.profile-item{background:#f8fafc;padding:9px 12px;border-radius:8px}
-.pl{display:block;font-size:.7rem;color:var(--muted);text-transform:uppercase;font-weight:600;margin-bottom:3px}
-.pv{display:block;font-size:.9rem;font-weight:600;color:var(--text);word-break:break-word}
-.timeline{position:relative;padding-left:20px;margin-top:10px;}
-.timeline::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:#e2e8f0;}
-.timeline-item{position:relative;margin-bottom:15px;background:#f8fafc;padding:12px;border-radius:8px;border:1px solid var(--border);}
-.timeline-item::before{content:'';position:absolute;left:-26px;top:15px;width:12px;height:12px;border-radius:50%;background:var(--brand);border:3px solid #fff;}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alembic CSR Foundation — Budget & Expense Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --primary: #0b4a7d;
+      --primary-dark: #072f52;
+      --accent: #eab308;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #cbd5e1;
+      --danger: #dc2626;
+      --danger-bg: #fef2f2;
+      --success: #15803d;
+      --success-bg: #f0fdf4;
+      --warn-bg: #fffbeb;
+    }
 
+    * { box-sizing: border-box; }
 
-/* ============ TREE ============ */
-.tree-wrapper{position:relative;width:100%;max-width:1100px;margin:0 auto 30px;border-radius:20px;overflow:hidden;background-color:#fcf9f2;box-shadow:0 10px 30px rgba(0,0,0,0.1);display:flex;flex-direction:column;align-items:center;padding-bottom:70px;}
-.tree-svg-bg{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;}
-.tree-nodes-container{position:relative;z-index:3;width:90%;max-width:950px;margin-top:60px;display:flex;flex-wrap:wrap;justify-content:center;align-content:flex-start;gap:35px 25px;min-height:500px;}
-.tree-node{display:flex;flex-direction:column;align-items:center;width:135px;background:#fff;border:4px solid #4d7e1e;border-radius:40px 40px 15px 15px;padding-top:18px;padding-bottom:12px;position:relative;cursor:pointer;transition:transform 0.25s ease,box-shadow 0.25s ease;box-shadow:0 4px 12px rgba(0,0,0,0.15);text-align:center;}
-.tree-node:hover{transform:translateY(-8px) scale(1.05);z-index:20;box-shadow:0 10px 25px rgba(0,0,0,0.25);}
-.tree-node::before,.tree-node::after{content:'';position:absolute;top:-12px;width:35px;height:35px;background:#fff;border:4px solid #4d7e1e;border-radius:50%;z-index:-1;}
-.tree-node::before{left:15px;} .tree-node::after{right:15px;}
-.tree-node-photo{width:80px;height:80px;border-radius:50%;border:4px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,0.2);overflow:hidden;margin-top:-40px;background:#eee;position:relative;z-index:2;display:grid;place-items:center;font-size:2rem;}
-.tree-node-photo img{width:100%;height:100%;object-fit:cover;}
-.tree-node-name{font-size:0.85rem;font-weight:800;color:#154d71;margin-top:10px;line-height:1.2;padding:0 5px;}
-.tree-node-name.staff-name{color:#166534;}
-.tree-banner{position:absolute;bottom:15px;z-index:4;background:#fff;border:3px solid #5b8f22;border-radius:30px;padding:10px 60px;font-size:1.2rem;font-weight:800;letter-spacing:3px;color:#154d71;box-shadow:0 4px 15px rgba(0,0,0,0.1);text-transform:uppercase;}
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
 
-/* ============ PRINT OPTIONS ============ */
-.print-options-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px;margin-bottom:15px;}
-.print-section{border:1px solid var(--border);border-radius:8px;padding:15px;background:#fafbfc;}
-.print-section h5{font-size:0.9rem;color:var(--brand);margin-bottom:10px;}
-.print-section label{display:flex;align-items:center;gap:8px;font-size:0.85rem;margin-bottom:8px;cursor:pointer;}
-.print-section input[type="checkbox"],.print-section input[type="radio"]{cursor:pointer;width:16px;height:16px;accent-color:var(--brand);}
+    .hidden { display: none !important; }
 
-@media print {
-  body > *:not(#printArea){display:none !important;}
-  #printArea{display:block !important;position:static !important;width:100% !important;margin:0 !important;padding:0 !important;background:#fff !important;}
-  #printArea *{visibility:visible !important;}
-  body,html{background:#fff !important;height:auto !important;overflow:hidden !important;}
-  .print-table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:12px;}
-  .print-table th,.print-table td{border:1px solid #000;padding:8px;text-align:left;page-break-inside:avoid;}
-  .print-table tr{page-break-inside:avoid;}
-  .print-title{text-align:center;margin-bottom:20px;font-size:20px;font-weight:bold;}
-}
+    /* ==================== LOGIN SCREEN ==================== */
+    .login-wrapper {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: linear-gradient(135deg, #072f52 0%, #0b4a7d 55%, #1366a8 100%);
+    }
 
-/* ============ BIRTHDAY EFFECTS ============ */
-.birthday-photo{border-color:#f472b6 !important;animation:birthdayPulse 1.5s infinite alternate;}
-@keyframes birthdayPulse{from{box-shadow:0 0 0 2px #f472b6,0 0 10px #f472b6;}to{box-shadow:0 0 0 6px #f472b6,0 0 25px #f472b6;}}
-.bday-emoji{position:absolute;top:-20px;right:-15px;font-size:1.8rem;z-index:10;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));animation:bounce 1s infinite alternate;}
-.bday-emoji-2{position:absolute;bottom:-5px;left:-15px;font-size:1.5rem;z-index:10;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));animation:bounce 1.3s infinite alternate-reverse;}
-@keyframes bounce{from{transform:translateY(0);}to{transform:translateY(-6px);}}
-.birthday-banner{background:linear-gradient(90deg,#fbcfe8,#fce7f3,#fbcfe8);color:#be185d;padding:12px;text-align:center;border-radius:8px;font-weight:800;font-size:1.05rem;margin-bottom:18px;border:2px dashed #db2777;animation:pulseBanner 2s infinite;}
-@keyframes pulseBanner{0%{transform:scale(1);}50%{transform:scale(1.02);}100%{transform:scale(1);}}
-</style>
+    .login-card {
+      background: var(--card);
+      width: 100%;
+      max-width: 430px;
+      border-radius: 14px;
+      padding: 30px;
+      box-shadow: 0 20px 45px rgba(0,0,0,0.25);
+    }
+
+    .brand-box {
+      text-align: center;
+      margin-bottom: 22px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .brand-box img {
+      max-height: 62px;
+      max-width: 100%;
+      object-fit: contain;
+      margin-bottom: 8px;
+    }
+
+    .brand-box h1 {
+      margin: 4px 0 2px;
+      font-size: 20px;
+      color: var(--primary-dark);
+    }
+
+    .brand-box p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .field {
+      margin-bottom: 14px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: #334155;
+    }
+
+    .field input, .field select {
+      width: 100%;
+      padding: 9px 11px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      background: #fff;
+    }
+
+    .field input:focus, .field select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(11,74,125,0.12);
+    }
+
+    .pass-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .pass-wrap input {
+      padding-right: 40px;
+    }
+
+    .eye-btn {
+      position: absolute;
+      right: 8px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      color: var(--muted);
+      padding: 4px;
+    }
+
+    button {
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      border-radius: 8px;
+      border: none;
+      transition: 0.15s ease;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      padding: 10px 16px;
+      font-size: 14px;
+    }
+
+    .btn-primary:hover { background: var(--primary-dark); }
+
+    .btn-outline {
+      background: #fff;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+      padding: 8px 13px;
+      font-size: 13px;
+    }
+
+    .btn-outline:hover { background: #eff6ff; }
+
+    .btn-danger {
+      background: var(--danger);
+      color: #fff;
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: #fff;
+      padding: 8px 13px;
+      font-size: 13px;
+    }
+
+    .btn-success:hover { background: #166534; }
+
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+    .w-full { width: 100%; }
+
+    .login-error {
+      background: var(--danger-bg);
+      color: var(--danger);
+      border: 1px solid #fecaca;
+      padding: 9px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 14px;
+      display: none;
+    }
+
+    .login-links {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 12px;
+      font-size: 13px;
+    }
+
+    .link-btn {
+      background: none;
+      border: none;
+      color: var(--primary);
+      text-decoration: underline;
+      padding: 0;
+      font-size: 13px;
+    }
+
+    /* ==================== TOP HEADER ==================== */
+    .topbar {
+      background: var(--primary-dark);
+      color: #fff;
+      padding: 10px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .topbar-logo {
+      height: 40px;
+      background: #fff;
+      padding: 3px 8px;
+      border-radius: 6px;
+      object-fit: contain;
+    }
+
+    .topbar-title { font-size: 16px; font-weight: 700; }
+    .topbar-sub { font-size: 12px; color: #cbd5e1; }
+
+    .topbar-right {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .topbar select {
+      padding: 6px 10px;
+      border-radius: 7px;
+      border: 1px solid #475569;
+      background: #fff;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .container {
+      max-width: 1380px;
+      margin: 0 auto;
+      padding: 18px 20px 40px;
+    }
+
+    /* ==================== CARDS & KPIs ==================== */
+    .card {
+      background: var(--card);
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 18px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    .card-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .card-header h2, .card-header h3 {
+      margin: 0;
+      font-size: 17px;
+      color: var(--primary-dark);
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .kpi-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-left: 4px solid var(--primary);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+
+    .kpi-box.over {
+      background: var(--danger-bg);
+      border-color: #fecaca;
+      border-left-color: var(--danger);
+    }
+
+    .kpi-box .lbl { font-size: 12px; color: var(--muted); font-weight: 600; }
+    .kpi-box .val { font-size: 20px; font-weight: 800; margin: 4px 0; color: var(--text); }
+    .kpi-box .sub { font-size: 11.5px; color: var(--muted); }
+
+    .text-danger { color: var(--danger) !important; font-weight: 700; }
+    .text-success { color: var(--success) !important; font-weight: 700; }
+
+    /* ==================== TABLES ==================== */
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      background: #fff;
+    }
+
+    th {
+      background: #f1f5f9;
+      color: #1e293b;
+      font-weight: 700;
+      text-align: left;
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: middle;
+    }
+
+    th.num, td.num { text-align: right; }
+    th.center, td.center { text-align: center; }
+
+    tr.theme-row td {
+      background: #e0f2fe;
+      font-weight: 700;
+      color: #072f52;
+    }
+
+    tr.total-row td {
+      background: #fef9c3;
+      font-weight: 800;
+      border-top: 2px solid #eab308;
+    }
+
+    tr.over-row td {
+      background: #fef2f2;
+    }
+
+    tr.salary-row td {
+      background: #f0fdf4;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .badge-blue { background: #dbeafe; color: #1d4ed8; }
+    .badge-amber { background: #fef3c7; color: #b45309; }
+    .badge-green { background: #dcfce7; color: #15803d; }
+    .badge-slate { background: #e2e8f0; color: #334155; }
+    .status-toggle-btn { cursor: pointer; border: 1px solid rgba(0,0,0,0.08); }
+
+    .proj-logo-thumb {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+      border-radius: 4px;
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      padding: 1px;
+      vertical-align: middle;
+    }
+
+    /* ==================== PM RIGHTS SPLIT PANEL ==================== */
+    .split-grid {
+      display: grid;
+      grid-template-columns: 310px 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .split-grid { grid-template-columns: 1fr; }
+    }
+
+    .pm-list {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .pm-list-item {
+      padding: 11px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .pm-list-item:last-child { border-bottom: none; }
+    .pm-list-item:hover { background: #f8fafc; }
+    .pm-list-item.active {
+      background: #eff6ff;
+      border-left: 4px solid var(--primary);
+    }
+
+    .rights-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 8px;
+      max-height: 340px;
+      overflow-y: auto;
+      padding: 10px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      background: #f8fafc;
+    }
+
+    .right-check-card {
+      background: #fff;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 8px 10px;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 12.5px;
+      cursor: pointer;
+    }
+
+    .right-check-card.checked {
+      border-color: var(--primary);
+      background: #eff6ff;
+    }
+
+    /* ==================== EXPENSE FORM & CHARTS ==================== */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+      gap: 12px;
+      align-items: end;
+    }
+
+    .sal-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px;
+    }
+
+    .chart-box {
+      position: relative;
+      height: 310px;
+      width: 100%;
+    }
+
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-end;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      padding: 12px;
+      border-radius: 10px;
+      margin-bottom: 14px;
+    }
+
+    .alert-warn {
+      background: var(--warn-bg);
+      border: 1px solid #fcd34d;
+      color: #92400e;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 12px;
+      display: none;
+    }
+
+    .inline-num-input {
+      width: 92px !important;
+      padding: 4px 6px !important;
+      font-size: 12.5px !important;
+      text-align: right;
+    }
+
+    /* ==================== OPTIONAL REQUISITION FORM (A4 PORTRAIT) ==================== */
+    .req-selector-box {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+    }
+
+    .req-sheet {
+      background: #fff;
+      border: 1px solid #94a3b8;
+      border-radius: 8px;
+      padding: 24px 28px;
+      max-width: 820px;
+      margin: 0 auto;
+    }
+
+    .req-editable-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: #072f52;
+      border: 1px dashed transparent;
+      border-radius: 4px;
+      padding: 2px 6px;
+      width: 100%;
+      max-width: 440px;
+      background: transparent;
+    }
+
+    .req-editable-title:hover, .req-editable-title:focus {
+      border-color: #94a3b8;
+      background: #f8fafc;
+      outline: none;
+    }
+
+    .req-editable-sub {
+      font-size: 12px;
+      color: #475569;
+      border: 1px dashed transparent;
+      border-radius: 4px;
+      padding: 1px 6px;
+      width: 100%;
+      max-width: 440px;
+      background: transparent;
+    }
+
+    .req-editable-sub:hover, .req-editable-sub:focus {
+      border-color: #94a3b8;
+      background: #f8fafc;
+      outline: none;
+    }
+
+    .req-line-input {
+      border: none;
+      border-bottom: 1px solid #64748b;
+      border-radius: 0;
+      padding: 4px 6px;
+      font-size: 13px;
+      width: 100%;
+      background: transparent;
+    }
+
+    .req-table th { background: #e2e8f0; color: #0f172a; }
+
+    /* ==================== MODALS ==================== */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 16px;
+    }
+
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      background: #fff;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 22px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+    }
+
+    .modal.modal-lg {
+      max-width: 820px;
+    }
+
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .modal-head h3 { margin: 0; font-size: 16px; color: var(--primary-dark); }
+
+    /* ==================== PRINT ISOLATION (ONLY REQUISITION SHEET PRINTS) ==================== */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 10mm;
+      }
+      body {
+        background: #fff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .topbar,
+      .no-print,
+      .modal-backdrop,
+      #loginScreen,
+      #csrHeadMain,
+      #pmDashboardMain > .card:not(#requisitionSection) {
+        display: none !important;
+      }
+      #appShell,
+      .container,
+      #pmDashboardMain,
+      #requisitionSection {
+        display: block !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        border: none !important;
+        box-shadow: none !important;
+        background: #fff !important;
+      }
+      .req-sheet {
+        border: none !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 !important;
+      }
+      .req-editable-title,
+      .req-editable-sub {
+        border: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+      }
+    }
+  </style>
 </head>
 <body>
-<header>
-  <div class="brand">
-    <img src="alembic-logo.png" alt="Alembic" style="height:45px;background:#fff;padding:3px;border-radius:6px;" onerror="this.style.display='none'">
-    <img src="gfc-logo.png" alt="GFC" style="height:45px;background:#fff;padding:3px;border-radius:6px;" onerror="this.style.display='none'">
-    <div style="margin-left:10px;border-left:2px solid rgba(255,255,255,0.3);padding-left:15px;">Alembic | GFC Management System</div>
-  </div>
-  <div style="display:flex;gap:10px;">
-<button class="btn btn-light" onclick="openGalleryModal()">📸 GFC Photo Gallery</button>
-    <button class="btn btn-light" onclick="openPrintModal()">🖨️ Print / Export</button>
-    <button id="authBtn" class="btn btn-light" onclick="handleAuth()">🔒 Admin Login</button>
-  </div>
-</header>
 
-<div class="container">
-  <!-- ================= PUBLIC VIEW ================= -->
-  <div id="publicView">
-    <div class="kpi-grid">
-      <div class="kpi"><div class="label">Active Children</div><div class="value" id="kpiActive">–</div><div class="sub">Currently in home</div></div>
-      <div class="kpi green"><div class="label">School Enrollment</div><div class="value" id="kpiEnroll">–</div><div class="sub">Of active children</div></div>
-      <div class="kpi orange"><div class="label">Total Inactive</div><div class="value" id="kpiInactive">–</div><div class="sub">Left / inactive</div></div>
-      <div class="kpi blue"><div class="label">Counselling Sessions</div><div class="value" id="kpiCounselling">–</div><div class="sub">In selected period</div></div>
-    </div>
+  <!-- ==================== LOGIN SCREEN ==================== -->
+  <div id="loginScreen" class="login-wrapper">
+    <div class="login-card">
+      <div class="brand-box">
+        <img src="Alembic CSR Logo (New).png" alt="Alembic CSR Foundation Logo" onerror="this.style.display='none'" />
+        <h1>Alembic CSR Foundation</h1>
+        <p>Budget &amp; Expense Tracking Portal</p>
+      </div>
 
-    <div class="section-title">📊 GFC Performance Dashboard</div>
+      <div id="loginError" class="login-error"></div>
 
-    <div class="filter-bar no-print">
-      <div class="filter-group">
-        <label>Report Type</label>
-        <select id="filterMode" onchange="toggleFilterMode()">
-          <option value="all">All Children (Combined)</option>
-          <option value="individual">Individual Child</option>
-        </select>
-      </div>
-      <div class="filter-group" id="childFilterGroup" style="display:none;">
-        <label>Select Child</label>
-        <select id="filterChildId"></select>
-      </div>
-      <div class="filter-group">
-        <label>From Date</label>
-        <input type="date" id="filterFromDate"/>
-      </div>
-      <div class="filter-group">
-        <label>To Date</label>
-        <input type="date" id="filterToDate"/>
-      </div>
-      <button class="btn btn-primary" onclick="loadDashboardData()">🔍 Apply Filter</button>
-    </div>
-
-    <div class="dashboard-split">
-      <div class="dashboard-list-card">
-        <div class="dashboard-list-title">Reports List</div>
-        <div class="dashboard-list-items" id="reportListItems">
-          <div style="padding:10px;font-size:0.82rem;color:#6b7280;">Loading...</div>
+      <form id="loginForm">
+        <div class="field">
+          <label for="loginEmailInput">Email ID</label>
+          <input type="email" id="loginEmailInput" required placeholder="Enter registered email ID" autocomplete="username" />
         </div>
-      </div>
-      <div class="dashboard-chart-panel">
-        <div class="chart-grid" id="chartsGrid"></div>
-      </div>
-    </div>
 
-    <div class="section-title">🌳 Children's Family Tree</div>
-    <div class="tree-wrapper">
-      <svg class="tree-svg-bg" viewBox="0 0 1000 800" preserveAspectRatio="xMidYMax meet" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fcf9f2"/><stop offset="100%" stop-color="#fdfbf7"/></linearGradient>
-          <path id="leafShape" d="M0,20 C10,-10 30,-10 40,20 C30,50 10,50 0,20 Z" />
-        </defs>
-        <rect width="1000" height="800" fill="url(#sky)"/>
-        <path d="M460,800 Q460,600 480,500 C450,350 300,280 200,250 C350,300 450,350 480,450 C520,350 650,300 800,250 C650,280 520,350 520,500 Q540,600 540,800 Z" fill="#154d71"/>
-        <path d="M480,500 Q450,350 400,250 C450,300 480,400 500,500 Z" fill="#154d71"/>
-        <path d="M520,500 Q550,350 600,250 C550,300 520,400 500,500 Z" fill="#154d71"/>
-        <g fill="#6a9e2b">
-          <use href="#leafShape" x="250" y="150" transform="rotate(-30 250 150) scale(1.5)"/>
-          <use href="#leafShape" x="300" y="250" transform="rotate(-15 300 250) scale(1.8)"/>
-          <use href="#leafShape" x="400" y="120" transform="rotate(-40 400 120) scale(1.4)"/>
-          <use href="#leafShape" x="500" y="80" transform="rotate(10 500 80) scale(1.6)"/>
-          <use href="#leafShape" x="600" y="120" transform="rotate(40 600 120) scale(1.4)"/>
-          <use href="#leafShape" x="750" y="150" transform="rotate(30 750 150) scale(1.5)"/>
-          <use href="#leafShape" x="700" y="250" transform="rotate(15 700 250) scale(1.8)"/>
-        </g>
-        <path d="M0,720 Q250,700 500,720 T1000,720 L1000,800 L0,800 Z" fill="#9ccd3d"/>
-        <path d="M0,730 Q250,710 500,730 T1000,730 L1000,800 L0,800 Z" fill="#8ab932"/>
-      </svg>
-      <div class="tree-nodes-container" id="treeCanopy"></div>
-      <div class="tree-banner">OUR FAMILY TREE</div>
-    </div>
+        <div class="field">
+          <label for="loginPassInput">Password</label>
+          <div class="pass-wrap">
+            <input type="password" id="loginPassInput" required placeholder="Enter your password" autocomplete="current-password" />
+            <button type="button" class="eye-btn" id="toggleLoginPass" title="Show / Hide Password">👁</button>
+          </div>
+        </div>
 
-    <div class="section-title">👨‍🏫 Our Staff Tree</div>
-    <div class="tree-wrapper">
-      <svg class="tree-svg-bg" viewBox="0 0 1000 800" preserveAspectRatio="xMidYMax meet" xmlns="http://www.w3.org/2000/svg">
-        <rect width="1000" height="800" fill="url(#sky)"/>
-        <path d="M460,800 Q460,600 480,500 C450,350 300,280 200,250 C350,300 450,350 480,450 C520,350 650,300 800,250 C650,280 520,350 520,500 Q540,600 540,800 Z" fill="#166534"/>
-        <path d="M480,500 Q450,350 400,250 C450,300 480,400 500,500 Z" fill="#166534"/>
-        <path d="M520,500 Q550,350 600,250 C550,300 520,400 500,500 Z" fill="#166534"/>
-        <g fill="#4ade80">
-          <use href="#leafShape" x="250" y="150" transform="rotate(-30 250 150) scale(1.5)"/>
-          <use href="#leafShape" x="300" y="250" transform="rotate(-15 300 250) scale(1.8)"/>
-          <use href="#leafShape" x="400" y="120" transform="rotate(-40 400 120) scale(1.4)"/>
-          <use href="#leafShape" x="500" y="80" transform="rotate(10 500 80) scale(1.6)"/>
-          <use href="#leafShape" x="600" y="120" transform="rotate(40 600 120) scale(1.4)"/>
-          <use href="#leafShape" x="750" y="150" transform="rotate(30 750 150) scale(1.5)"/>
-          <use href="#leafShape" x="700" y="250" transform="rotate(15 700 250) scale(1.8)"/>
-        </g>
-        <path d="M0,720 Q250,700 500,720 T1000,720 L1000,800 L0,800 Z" fill="#9ccd3d"/>
-        <path d="M0,730 Q250,710 500,730 T1000,730 L1000,800 L0,800 Z" fill="#8ab932"/>
-      </svg>
-      <div class="tree-nodes-container" id="staffTreeCanopy"></div>
-      <div class="tree-banner" style="color:#166534;border-color:#166534;">OUR STAFF TREE</div>
+        <button type="submit" class="btn-primary w-full">Sign In</button>
+      </form>
+
+      <div class="login-links">
+        <button type="button" class="link-btn" id="btnOpenResetPass">Reset / Change Password</button>
+        <span style="color:var(--muted); font-size:12px;">Role-Based Access</span>
+      </div>
     </div>
   </div>
 
-  <!-- ================= ADMIN VIEW ================= -->
-  <div id="adminView">
-    <div class="admin-header-bar">
-      <div class="section-title" style="margin:0">🛠️ Admin Panel</div>
-      <div style="display:flex;gap:10px;">
-        <button class="btn btn-primary" onclick="openForm()">➕ Add Child</button>
-        <button class="btn btn-ok" onclick="openStaffForm()">➕ Add Staff</button>
-      </div>
-    </div>
-
-    <div class="tab-container">
-      <div class="tab-buttons">
-        <button class="tab-btn active" onclick="switchTab('health')">🏥 Health & Sickness</button>
-        <button class="tab-btn" onclick="switchTab('education')">🎓 Education</button>
-        <button class="tab-btn" onclick="switchTab('counselling')">🧠 Counselling</button>
-        <button class="tab-btn" onclick="switchTab('activities')">🎨 Activities</button>
-        <button class="tab-btn" onclick="switchTab('incidents')">⚠️ Incidents</button>
-        <button class="tab-btn" onclick="switchTab('schemes')">📜 Govt Schemes</button>
-      </div>
-
-      <div id="tab-health" class="tab-content active">
-        <h4 style="margin-bottom:15px;color:var(--brand);">Log Health Details</h4>
-        <div class="form-grid">
-          <div><label>Select Child</label><select id="h_child_id" class="child-select"></select></div>
-          <div><label>Date</label><input id="h_date" type="date"/></div>
-          <div><label>Height (CM)</label><input id="h_height" type="number" step="0.1"/></div>
-          <div><label>Weight (KG)</label><input id="h_weight" type="number" step="0.1"/></div>
-          <div><label>Child fell sick?</label><select id="h_is_sick" onchange="document.getElementById('sick_details_box').style.display = this.value === 'yes' ? 'grid' : 'none'"><option value="no">No</option><option value="yes">Yes</option></select></div>
-          <div class="full-width form-grid" id="sick_details_box" style="display:none;background:#fef2f2;padding:15px;border-radius:8px;border:1px dashed #f87171;margin-top:10px;">
-            <div style="grid-column:1/-1;font-weight:700;color:#dc2626;margin-bottom:5px;">Sickness Details</div>
-            <div><label>Sickness / Disease Name</label><input id="h_sick_name" type="text" placeholder="e.g., Fever, Typhoid"/></div>
-            <div><label>Place / Hospital</label><input id="h_sick_place" type="text"/></div>
-            <div><label>Recovery Time (Days)</label><input id="h_sick_recovery" type="number"/></div>
-          </div>
-          <div class="full-width" style="margin-top:10px;"><button class="btn btn-primary" onclick="saveHealth()">💾 Save Health Record</button></div>
-        </div>
-      </div>
-
-      <div id="tab-education" class="tab-content">
-        <h4 style="margin-bottom:15px;color:var(--brand);">Log Education Result</h4>
-        <div class="form-grid">
-          <div>
-            <label>Select Child</label>
-            <select id="e_child_id" class="child-select"></select>
-          </div>
-          <div>
-            <label>Academic Year</label>
-            <input id="e_year" type="text" placeholder="e.g. 2022-23, 2023-24, 2025-26" autocomplete="off"/>
-          </div>
-          <div>
-            <label>Exam Term</label>
-            <input id="e_term" type="text" placeholder="Final / First Term" autocomplete="off"/>
-          </div>
-        </div>
-        <div style="margin-top:15px;margin-bottom:10px;font-weight:700;font-size:0.9rem;">Subject-wise Marks</div>
-        <div id="subjects_container"></div>
-        <button type="button" class="btn btn-sm" style="margin:10px 0;background:#e2e8f0;" onclick="addSubjectRow()">+ Add Subject</button>
-        <div class="form-grid">
-          <div>
-            <label>Total Marks Obtained (Auto)</label>
-            <input id="e_total" type="number" readonly style="background:#f0fdf4;font-weight:bold;"/>
-          </div>
-          <div>
-            <label>Percentage (Auto)</label>
-            <input id="e_perc" type="text" readonly style="background:#f0fdf4;font-weight:bold;"/>
-          </div>
-          <div>
-            <label style="opacity:0;user-select:none;">Save</label>
-            <button type="button" class="btn btn-primary" onclick="saveEducation()">💾 Save Education Record</button>
-          </div>
-        </div>
-      </div>
-
-      <div id="tab-counselling" class="tab-content">
-        <h4 style="margin-bottom:15px;color:var(--brand);">Log Counselor Report</h4>
-        <div class="form-grid">
-          <div><label>Select Child</label><select id="c_child_id" class="child-select"></select></div>
-          <div><label>Session Date</label><input id="c_date" type="date"/></div>
-          <div><label>Counselor Name</label><input id="c_name" type="text"/></div>
-          <div><label>Behavior / Nature</label><input id="c_behavior" type="text" placeholder="e.g., Aggressive, Calm"/></div>
-          <div class="full-width"><label>Emotional State / Progress Notes</label><textarea id="c_notes" rows="3"></textarea></div>
-          <button class="btn btn-primary" onclick="saveCounselling()">💾 Save Report</button>
-        </div>
-      </div>
-
-      <div id="tab-activities" class="tab-content">
-        <h4 style="margin-bottom:15px;color:var(--brand);">Log Co-curricular Activity</h4>
-        <div class="form-grid">
-          <div><label>Select Child</label><select id="a_child_id" class="child-select"></select></div>
-          <div><label>Activity Name</label><input id="a_name" type="text" placeholder="e.g., Cricket, Dance"/></div>
-          <div><label>Start Date</label><input id="a_start" type="date"/></div>
-          <div><label>End Date (optional)</label><input id="a_end" type="date"/></div>
-          <div class="full-width"><label>Achievements/Details</label><input id="a_details" type="text"/></div>
-          <button class="btn btn-primary" onclick="saveActivity()">💾 Save Activity</button>
-        </div>
-      </div>
-
-      <div id="tab-incidents" class="tab-content">
-        <h4 style="margin-bottom:15px;color:var(--brand);">Log Incident / Runaway</h4>
-        <div class="form-grid">
-          <div><label>Select Child</label><select id="i_child_id" class="child-select"></select></div>
-          <div><label>Date</label><input id="i_date" type="date"/></div>
-          <div><label>Type</label><select id="i_type"><option value="Runaway">Runaway</option><option value="Accident">Accident</option><option value="Behavior">Behavior</option><option value="Other">Other</option></select></div>
-          <div><label>Location</label><input id="i_location" type="text"/></div>
-          <div><label>Is Resolved?</label><select id="i_resolved"><option value="yes">Yes</option><option value="no">No</option></select></div>
-          <div style="grid-column:1/-1;font-weight:700;color:#dc2626;margin-top:10px;">Reason & Action Taken</div>
-          <div><label>Exact Reason</label><input id="i_reason" type="text" placeholder="e.g., Fight with friend"/></div>
-          <div><label>Action Taken</label><input id="i_action" type="text" placeholder="e.g., Counselling, Police complaint"/></div>
-          <div class="full-width" style="margin-top:10px;"><button class="btn btn-primary" onclick="saveIncident()">💾 Save Incident</button></div>
-        </div>
-      </div>
-
-      <div id="tab-schemes" class="tab-content">
-        <h4 style="margin-bottom:15px;color:var(--brand);">Log Govt Scheme / Financial Aid</h4>
-        <div class="form-grid">
-          <div><label>Select Child</label><select id="s_child_id" class="child-select"></select></div>
-          <div><label>Scheme Name</label><input id="s_name" type="text" value="Foster Care Benefit"/></div>
-          <div><label>Amount Received (₹)</label><input id="s_amount" type="number" value="3000"/></div>
-          <div><label>Received Date</label><input id="s_date" type="date"/></div>
-          <div><label>Bank Account (Last 4)</label><input id="s_bank" type="text"/></div>
-          <div><label>Status</label><select id="s_status"><option value="Received">Received</option><option value="Pending">Pending</option></select></div>
-          <button class="btn btn-primary" onclick="saveScheme()">💾 Save Scheme</button>
-        </div>
-      </div>
-    </div>
-
-    <h4 style="margin-bottom:10px;color:var(--brand);">Children Records</h4>
-    <div class="table-wrap">
-      <table><thead><tr><th>Sr</th><th>GFC ID</th><th>Name</th><th>Age</th><th>Status</th><th>Actions</th></tr></thead><tbody id="adminTableBody"></tbody></table>
-    </div>
-
-    <h4 style="margin:20px 0 10px;color:var(--ok);">Staff Records</h4>
-    <div class="table-wrap">
-      <table><thead><tr><th>Sr</th><th>Name</th><th>Role</th><th>Shift</th><th>Status</th><th>Actions</th></tr></thead><tbody id="adminStaffTableBody"></tbody></table>
-    </div>
-  </div>
-</div>
-
-<!-- LOGIN MODAL -->
-<div class="modal" id="loginModal">
-  <div class="modal-box">
-    <h3>🔒 Admin Login</h3>
-    <div class="err" id="loginErr" style="display:none;color:red;margin-bottom:10px;">❌ Wrong password</div>
-    <input id="passwordInput" type="password" placeholder="Enter admin password" onkeydown="if(event.key==='Enter') doLogin()"/>
-    <div style="display:flex;gap:10px;justify-content:flex-end">
-      <button class="btn" style="background:#e5e7eb;color:#374151" onclick="document.getElementById('loginModal').classList.remove('show')">Cancel</button>
-      <button class="btn btn-primary" onclick="doLogin()">Login</button>
-    </div>
-  </div>
-</div>
-
-<!-- CHILD FORM MODAL (ZERO DUPLICATES, FULL DETAILS + CASE STUDY) -->
-<div class="modal" id="formModal">
-  <div class="modal-box modal-large">
-    <div class="modal-header">
-      <h3 id="formTitle">➕ Add New Child</h3>
-      <button class="modal-close" onclick="document.getElementById('formModal').classList.remove('show')">×</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="editId"/>
-
-      <h4 class="form-section">Basic Information</h4>
-      <div class="form-grid">
-        <div><label>Sr. No</label><input id="fSerialNo" type="number"/></div>
-        <div><label>GFC ID No</label><input id="fGfcId" type="text" placeholder="GFC220204"/></div>
+  <!-- ==================== MAIN APPLICATION SHELL ==================== -->
+  <div id="appShell" class="hidden">
+    <header class="topbar no-print">
+      <div class="topbar-left">
+        <img src="Alembic CSR Logo (New).png" alt="Logo" class="topbar-logo" onerror="this.style.display='none'" />
         <div>
-          <label>Photo Upload</label>
-          <input id="fPhotoUpload" type="file" accept="image/*" onchange="handlePhotoUpload(event, 'fPhotoUrl', 'fPhotoPreview')"/>
-          <input type="hidden" id="fPhotoUrl"/>
-          <img id="fPhotoPreview" class="img-preview"/>
+          <div class="topbar-title">Alembic CSR Foundation — Budget &amp; Expense Tracker</div>
+          <div class="topbar-sub" id="loggedUserMeta"></div>
         </div>
-        <div><label>First Name *</label><input id="fFirstName" type="text"/></div>
-        <div><label>Father's Name</label><input id="fFatherName" type="text"/></div>
-        <div><label>Surname</label><input id="fLastName" type="text"/></div>
-        <div>
-          <label>Child Category / Type</label>
-          <select id="fChildType">
-            <option value="">-- Select Type --</option>
-            <option value="Orphan">Orphan</option>
-            <option value="Single Parent (Mother)">Single Parent (Mother)</option>
-            <option value="Single Parent (Father)">Single Parent (Father)</option>
-            <option value="Semi-Orphan">Semi-Orphan</option>
-            <option value="Abandoned / Surrendered">Abandoned / Surrendered</option>
-            <option value="CNCP">Child in Need of Care (CNCP)</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-        <div><label>Gender</label><select id="fGender"><option value="Male">Male</option><option value="Female">Female</option></select></div>
-        <div><label>DOB</label><input id="fDob" type="date" onchange="calcAge18()"/></div>
-        <div><label>Age (auto)</label><input id="fAge" type="number" readonly/></div>
-        <div><label>Blood Group</label><select id="fBloodGroup"><option value="">--</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></div>
-        <div><label>Date of 18 Completed (auto)</label><input id="f18" type="date" readonly/></div>
       </div>
 
-      <h4 class="form-section">CWC & Important Dates</h4>
-      <div class="form-grid">
-        <div><label>CWC Order Date</label><input id="fCwcOrder" type="date"/></div>
-        <div><label>CWC Order / Case No.</label><input id="fCwcOrderNo" type="text" placeholder="e.g., CWC/VD/2022/04"/></div>
-        <div><label>GFC Join Date</label><input id="fGfcJoin" type="date"/></div>
-        <div><label>Foster Benefit Date</label><input id="fFosterBenefit" type="date"/></div>
-        <div><label>CWC Leave Order</label><input id="fCwcLeave" type="date"/></div>
+      <div class="topbar-right">
+        <label for="fySelect" style="font-size:12px; color:#e2e8f0;">FY:</label>
+        <select id="fySelect"></select>
+        <button type="button" class="btn-outline btn-sm head-only-btn" id="btnEditFy" style="background:#fff;">✏️ Edit FY</button>
+        <button type="button" class="btn-outline btn-sm head-only-btn" id="btnAddNewFy" style="background:#fff;">+ Add FY</button>
+        <button type="button" class="btn-outline btn-sm head-only-btn" id="btnArchiveCurrentFy" style="background:#fef9c3; color:#0f172a; border-color:#eab308;">Archive &amp; New FY</button>
+        <button type="button" class="btn-danger btn-sm head-only-btn" id="btnDeleteCurrentFy">🗑 Delete FY</button>
+        <button type="button" class="btn-outline btn-sm" id="btnTopResetPass" style="background:#fff;">Change Password</button>
+        <button type="button" class="btn-danger btn-sm" id="btnLogout">Logout</button>
       </div>
+    </header>
 
-      <h4 class="form-section">Guardian Info</h4>
-      <div class="form-grid">
-        <div><label>Guardian Name</label><input id="fGuardian" type="text"/></div>
-        <div><label>Relation</label><input id="fRelation" type="text" placeholder="e.g., Sister, Mother, Uncle"/></div>
-        <div><label>Mobile Number</label><input id="fContact" type="text" placeholder="10-digit mobile no."/></div>
-        <div><label>Alternate Contact No.</label><input id="fAltContact" type="text" placeholder="Optional"/></div>
-        <div class="full-width"><label>Full Address</label><textarea id="fAddress" rows="2"></textarea></div>
-      </div>
-
-      <h4 class="form-section">Education Details</h4>
-      <div class="form-grid">
-        <div><label>Previous CCI</label><input id="fPrevCci" type="text"/></div>
-        <div><label>Present School *</label><input id="fPresentSchool" type="text"/></div>
-        <div><label>Current Class / Course</label><input id="fCurrentClass" type="text"/></div>
-        <div>
-          <label>Medium of Instruction</label>
-          <select id="fMedium">
-            <option value="">-- Select Medium --</option>
-            <option value="Gujarati">Gujarati</option>
-            <option value="English">English</option>
-            <option value="Hindi">Hindi</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-        <div class="full-width"><label>School Remark</label><input id="fSchoolRemark" type="text"/></div>
-      </div>
-
-      <h4 class="form-section">ID & Bank Details</h4>
-      <div class="form-grid">
-        <div><label>Aadhar Card</label><input id="fAadhar" type="text"/></div>
-        <div><label>Account Holder Name</label><input id="fAccHolder" type="text"/></div>
-        <div><label>Bank Name</label><input id="fBank" type="text"/></div>
-        <div><label>Branch Name</label><input id="fBranch" type="text"/></div>
-        <div><label>Account Number</label><input id="fAccNo" type="text"/></div>
-        <div><label>IFSC Code</label><input id="fIfsc" type="text"/></div>
-      </div>
-
-      <h4 class="form-section">📋 Child Case Study</h4>
-      <div class="form-grid">
-        <div class="full-width"><label>2. Family Background</label><textarea id="fFamHistory" rows="2"></textarea></div>
-        <div class="full-width"><label>3. Health & Medical Information</label><textarea id="fHealthNotes" rows="2"></textarea></div>
-        <div class="full-width"><label>4. Social and Emotional History</label><textarea id="fSocialHistory" rows="2"></textarea></div>
-        <div class="full-width"><label>5. Educational History</label><textarea id="fEduHistory" rows="2"></textarea></div>
-        <div class="full-width"><label>6. Participation in Extracurricular Activities:</label><textarea id="fExtraActivities" rows="2"></textarea></div>
-        <div class="full-width"><label>7. Hobbies and Interests</label><textarea id="fHobbies" rows="2"></textarea></div>
-        <div class="full-width"><label>8. Emotional Triggers and Coping Mechanisms</label><textarea id="fTriggersCoping" rows="2"></textarea></div>
-        <div class="full-width"><label>9. Goals and Aspirations</label><textarea id="fGoals" rows="2"></textarea></div>
-        <div class="full-width"><label>10. Child's strength and weakness</label><textarea id="fStrengthWeakness" rows="2"></textarea></div>
-        <div class="full-width"><label>11. Conclusion</label><textarea id="fConclusion" rows="2"></textarea></div>
-      </div>
-
-      <h4 class="form-section">Status</h4>
-      <div class="form-grid">
-        <div><label>Status</label><select id="fStatus"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="document.getElementById('formModal').classList.remove('show')">Cancel</button>
-      <button class="btn btn-primary" id="saveChildBtn" onclick="saveChild()">💾 Save Child</button>
-    </div>
-  </div>
-</div>
-
-<!-- STAFF FORM MODAL (UPGRADED WITH KEY DETAILS) -->
-<div class="modal" id="staffModal">
-  <div class="modal-box modal-large">
-    <div class="modal-header"><h3 id="staffFormTitle">➕ Add New Staff</h3><button class="modal-close" onclick="document.getElementById('staffModal').classList.remove('show')">×</button></div>
-    <div class="modal-body">
-      <input type="hidden" id="editStaffId"/>
-      <h4 class="form-section">Staff Basic Details</h4>
-      <div class="form-grid">
-        <div><label>Sr. No.</label><input id="sSerialNo" type="number"/></div>
-        <div><label>Full Name *</label><input id="sName" type="text"/></div>
-        <div>
-          <label>Photo Upload</label>
-          <input id="sPhotoUpload" type="file" accept="image/*" onchange="handlePhotoUpload(event, 'sPhotoUrl', 'sPhotoPreview')"/>
-          <input type="hidden" id="sPhotoUrl"/>
-          <img id="sPhotoPreview" class="img-preview"/>
-        </div>
-        <div><label>Role / Designation</label><input id="sRole" type="text"/></div>
-        <div><label>Gender</label><select id="sGender"><option value="Male">Male</option><option value="Female">Female</option></select></div>
-        <div><label>DOB</label><input id="sDob" type="date"/></div>
-        <div><label>Blood Group</label><select id="sBloodGroup"><option value="">--</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></div>
-        <div><label>Qualification</label><input id="sQualification" type="text" placeholder="e.g., MSW, B.Ed, Graduate"/></div>
-        <div><label>Shift Timing</label><input id="sShift" type="text"/></div>
-        <div><label>Joining Date</label><input id="sJoinDate" type="date"/></div>
-      </div>
-
-      <h4 class="form-section">Contact & Emergency Info</h4>
-      <div class="form-grid">
-        <div><label>Mobile Number</label><input id="sContact" type="text"/></div>
-        <div><label>Emergency Contact</label><input id="sEmergencyContact" type="text" placeholder="Name & Mobile"/></div>
-        <div class="full-width"><label>Full Address</label><textarea id="sAddress" rows="2"></textarea></div>
-      </div>
-
-      <h4 class="form-section">ID & Bank Details</h4>
-      <div class="form-grid">
-        <div><label>Aadhar Card</label><input id="sAadhar" type="text"/></div>
-        <div><label>PAN Card</label><input id="sPan" type="text"/></div>
-        <div><label>Bank Name</label><input id="sBank" type="text"/></div>
-        <div><label>Branch Name</label><input id="sBranch" type="text"/></div>
-        <div><label>Account Number</label><input id="sAccNo" type="text"/></div>
-        <div><label>IFSC Code</label><input id="sIfsc" type="text"/></div>
-      </div>
-
-      <h4 class="form-section">Status</h4>
-      <div class="form-grid">
-        <div><label>Status</label><select id="sStatus"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="document.getElementById('staffModal').classList.remove('show')">Cancel</button>
-      <button class="btn btn-ok" id="saveStaffBtn" onclick="saveStaff()">💾 Save Staff</button>
-    </div>
-  </div>
-</div>
-
-<!-- PROFILE MODAL -->
-<div class="modal" id="profileModal">
-  <div class="modal-box modal-large">
-    <div class="modal-header">
-      <h3 id="profileModalTitle">👤 Profile</h3>
-      <button class="modal-close" onclick="document.getElementById('profileModal').classList.remove('show')">×</button>
-    </div>
-    <div class="modal-body" id="profileBody">
-      <div id="profileContent"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-primary" onclick="printSelectedProfile()">🖨️ Print Profile</button>
-      <button class="btn btn-light" onclick="document.getElementById('profileModal').classList.remove('show')">Close</button>
-    </div>
-  </div>
-</div>
-
-<!-- Photo Gallery Modal (Public View + Admin Upload/Delete) -->
-  <div id="galleryModal" class="modal">
-    <div class="modal-card" style="max-width:1240px;width:96vw;border-radius:18px;overflow:hidden;box-shadow:0 24px 60px rgba(15,23,42,0.28);">
-      <div class="modal-head" style="background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 100%);color:#fff;padding:16px 22px;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-size:1.5rem;">📸</span>
-          <div>
-            <h3 style="margin:0;color:#fff;font-size:1.2rem;letter-spacing:0.2px;">GFC Moments & Photo Gallery</h3>
-            <small style="color:#bfdbfe;font-size:0.78rem;">Celebrations, Excursions & Special Memories</small>
-          </div>
-        </div>
-        <button class="close-btn" onclick="closeGalleryModal()" style="color:#fff;font-size:1.3rem;">✕</button>
-      </div>
-      <div class="modal-body" style="max-height:85vh;overflow-y:auto;padding:20px 24px;background:#f8fafc;">
-
-        <!-- Admin-Only Upload Box -->
-        <div id="galleryAdminUploadBox" style="display:none;background:#ffffff;border:1px solid #cbd5e1;border-left:5px solid #2563eb;border-radius:14px;padding:16px 18px;margin-bottom:20px;box-shadow:0 4px 14px rgba(15,23,42,0.05);">
-          <div style="font-weight:800;font-size:1rem;margin-bottom:12px;color:#0f172a;">🔒 Admin Upload (Same Title = Same Album)</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:12px;">
+    <main class="container">
+      <!-- ==================== CSR HEAD VIEW ==================== -->
+      <section id="csrHeadMain" class="hidden no-print">
+        <!-- STEP 1: MASTER / PROJECT BUDGET OVERVIEW -->
+        <div class="card">
+          <div class="card-header">
             <div>
-              <label style="display:block;font-size:0.8rem;font-weight:700;margin-bottom:5px;color:#334155;">Event / Album Title *</label>
-              <input type="text" id="galTitle" placeholder="e.g. Diwali Celebration" style="width:100%;padding:9px 11px;border:1px solid #cbd5e1;border-radius:9px;font-size:0.9rem;">
+              <h2>1. Budget Overview — <span id="headFyLabel">FY 2026-27</span></h2>
+              <div style="font-size:12.5px; color:var(--muted);">
+                Switch between All Projects Master Summary or any single Project to view/edit budget heads &amp; balances
+              </div>
             </div>
-            <div>
-              <label style="display:block;font-size:0.8rem;font-weight:700;margin-bottom:5px;color:#334155;">Event Date *</label>
-              <input type="date" id="galDate" style="width:100%;padding:9px 11px;border:1px solid #cbd5e1;border-radius:9px;font-size:0.9rem;">
-            </div>
-            <div>
-              <label style="display:block;font-size:0.8rem;font-weight:700;margin-bottom:5px;color:#334155;">Select Photos (Multiple Allowed) *</label>
-              <input type="file" id="galFiles" accept="image/*" multiple onchange="previewGalleryFiles(event)" style="width:100%;padding:7px;border:1px solid #cbd5e1;border-radius:9px;background:#f8fafc;font-size:0.86rem;">
+            <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+              <select id="headProjectScope" style="padding:7px 11px; border-radius:8px; border:1px solid var(--border); font-weight:600;"></select>
+              <select id="headQuarterFilter" style="padding:7px 11px; border-radius:8px; border:1px solid var(--border); font-weight:600;">
+                <option value="ALL">All Quarters (Full FY)</option>
+                <option value="Q1">Q1 (Apr – Jun)</option>
+                <option value="Q2">Q2 (Jul – Sep)</option>
+                <option value="Q3">Q3 (Oct – Dec)</option>
+                <option value="Q4">Q4 (Jan – Mar)</option>
+              </select>
+              <button type="button" class="btn-outline btn-sm" id="btnAddSubHead">+ Add Budget Head</button>
+              <button type="button" class="btn-primary btn-sm" id="btnAddProject">+ Add Project</button>
+              <button type="button" class="btn-success btn-sm" id="btnExportMasterExcel">Export Master Excel</button>
             </div>
           </div>
-          <div id="galPreviewStrip" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;"></div>
-          <button type="button" id="galUploadBtn" class="btn btn-primary" onclick="uploadGalleryPhotos()" style="padding:9px 18px;font-weight:700;">☁️ Upload Photos</button>
+
+          <div class="kpi-grid" id="headScopeKpis"></div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th class="center" style="width:46px;">Logo</th>
+                  <th style="width:75px;">Sr. No.</th>
+                  <th>Particulars / Budget Head</th>
+                  <th>Assigned Owner &amp; Designation</th>
+                  <th class="num">Proposed Budget</th>
+                  <th class="num">Actual Expense</th>
+                  <th class="num">Balance</th>
+                  <th class="num">% Spent</th>
+                  <th class="num">% Bal</th>
+                  <th class="center" style="width:125px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="headBudgetTableBody"></tbody>
+            </table>
+          </div>
         </div>
 
-        <!-- Guest / Non-Admin Notice -->
-        <div id="galleryGuestNotice" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;background:linear-gradient(90deg,#eff6ff,#dbeafe);border:1px solid #93c5fd;border-radius:12px;padding:11px 16px;margin-bottom:18px;font-size:0.86rem;color:#1e3a8a;">
-          <span>👁️ Click any photo for full-screen view. Admin password is required to upload or delete.</span>
-          <button type="button" class="btn btn-primary btn-sm" onclick="closeGalleryModal(); handleAuth();">🔒 Admin Login</button>
+        <!-- STEP 2: PM / USER PROJECT ALLOCATION, DESIGNATION & CREDENTIALS (CSR HEAD ONLY) -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>2. Team / PM Access, Designation &amp; Login Credentials</h2>
+              <div style="font-size:12.5px; color:var(--muted);">
+                Add/edit team members, set designation, and tick-mark which projects each user can access
+              </div>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+              <button type="button" class="btn-primary btn-sm" id="btnAddPmUser">+ Add User / PM</button>
+              <button type="button" class="btn-outline btn-sm" id="btnEditPmCreds">Edit Name / Designation / Login</button>
+              <button type="button" class="btn-danger btn-sm" id="btnDeletePmUser">Delete User</button>
+            </div>
+          </div>
+
+          <div class="split-grid">
+            <div>
+              <div style="font-size:12px; font-weight:700; color:var(--muted); margin-bottom:6px;">TEAM MEMBERS</div>
+              <div class="pm-list" id="pmUsersList"></div>
+            </div>
+
+            <div>
+              <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; margin-bottom:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                  <strong id="selectedPmTitle" style="color:var(--primary-dark);">Select a user</strong>
+                  <button type="button" class="btn-success btn-sm" id="btnSavePmRights">Save Project Rights</button>
+                </div>
+                <div id="selectedPmCreds" style="font-size:12.5px; color:#334155; margin-top:6px;"></div>
+              </div>
+
+              <div style="font-size:12px; font-weight:700; color:var(--muted); margin-bottom:6px;">
+                TICK PROJECTS TO ASSIGN (UNCHECK TO REVOKE)
+              </div>
+              <div class="rights-grid" id="pmRightsCheckboxes"></div>
+            </div>
+          </div>
         </div>
 
-        <!-- Event Filter Bar -->
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:18px;background:#fff;padding:12px 16px;border-radius:12px;border:1px solid #e2e8f0;">
-          <div style="font-weight:800;font-size:1rem;color:#0f172a;">🗂️ Events & Celebration Albums</div>
-          <select id="galleryEventFilter" onchange="renderGalleryAlbums()" style="padding:8px 14px;border:1px solid #cbd5e1;border-radius:9px;background:#f8fafc;font-size:0.88rem;font-weight:600;color:#1e293b;min-width:210px;">
-            <option value="ALL">All Events</option>
+        <!-- STEP 3: VENDOR DIRECTORY -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>3. Vendor &amp; Payee Master Directory</h2>
+              <div style="font-size:12.5px; color:var(--muted);">
+                Saved vendors with bank account &amp; IFSC details linked to projects
+              </div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <select id="headVendorProjectFilter" style="padding:5px 9px; border-radius:7px; border:1px solid var(--border); font-size:12.5px; font-weight:600;"></select>
+              <span class="badge badge-blue" id="vendorScopeBadge">0 Vendors</span>
+              <button type="button" class="btn-primary btn-sm" id="btnHeadAddVendor">+ Add Vendor</button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Vendor / Payee Name</th>
+                  <th>Type</th>
+                  <th>Linked Project(s)</th>
+                  <th>Contact / Category</th>
+                  <th>Bank Account No.</th>
+                  <th>IFSC Code</th>
+                  <th class="center" style="width:120px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="headVendorTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- STEP 4: FIXED STAFF SALARY OVERVIEW (CSR HEAD) -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>4. Fixed Staff Salary &amp; CTC Summary (PF / CTC / Leave)</h2>
+              <div style="font-size:12.5px; color:var(--muted);">
+                Month-wise fixed staff salary &amp; Accounts final CTC — automatically included in Project Actual Expense &amp; Remaining Budget
+              </div>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+              <label style="font-size:12px; font-weight:700;">Month:</label>
+              <input type="month" id="headSalaryMonth" value="2026-11" style="padding:6px 10px; border-radius:8px; border:1px solid var(--border); font-size:13px;" />
+              <button type="button" class="btn-primary btn-sm" id="btnHeadAddStaff">+ Add Fixed Staff</button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Project</th>
+                  <th>Emp ID</th>
+                  <th>Employee &amp; Designation</th>
+                  <th class="num">Present Days</th>
+                  <th class="num">Earned Basic</th>
+                  <th class="num">HRA + Allow.</th>
+                  <th class="num">Gratuity</th>
+                  <th class="num">PF + PT</th>
+                  <th class="num">Net Pay</th>
+                  <th class="num">Final CTC</th>
+                  <th class="center">Expense Status</th>
+                  <th class="center" style="width:120px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="headStaffSalaryBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- STEP 5: ANALYTICS & EXPENSE LEDGER -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>5. Expense Analytics &amp; Live Expense Ledger</h2>
+              <div style="font-size:12.5px; color:var(--muted);">
+                Includes both Program Expenses and Posted Fixed Staff Salary — filter by date &amp; category, edit, or delete
+              </div>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button type="button" class="btn-primary btn-sm chart-switch" data-type="bar">Bar Chart</button>
+              <button type="button" class="btn-outline btn-sm chart-switch" data-type="line">Monthly Line</button>
+              <button type="button" class="btn-outline btn-sm chart-switch" data-type="doughnut">Budget Share</button>
+            </div>
+          </div>
+
+          <div class="chart-box" style="margin-bottom:18px;">
+            <canvas id="headAnalyticsChart"></canvas>
+          </div>
+
+          <div class="filter-bar">
+            <div class="field" style="margin:0;">
+              <label for="headFilterFromDate">From Date (DD/MM/YYYY)</label>
+              <input type="date" id="headFilterFromDate" />
+              <div id="headFromFormatted" style="font-size:11px; color:var(--muted); margin-top:2px;">From: Any</div>
+            </div>
+            <div class="field" style="margin:0;">
+              <label for="headFilterToDate">To Date (DD/MM/YYYY)</label>
+              <input type="date" id="headFilterToDate" />
+              <div id="headToFormatted" style="font-size:11px; color:var(--muted); margin-top:2px;">To: Any</div>
+            </div>
+            <div class="field" style="margin:0;">
+              <label for="headFilterCategory">Expense Type</label>
+              <select id="headFilterCategory">
+                <option value="ALL">All (Program + Staff Salary)</option>
+                <option value="PROGRAM">Program Expenses Only</option>
+                <option value="SALARY">Staff Salary Only</option>
+              </select>
+            </div>
+            <button type="button" class="btn-outline btn-sm" id="btnClearHeadDateFilter">Clear Filters</button>
+            <span class="badge badge-blue" id="headFilteredCountBadge" style="margin-left:auto;">0 Entries</span>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Project</th>
+                  <th>Budget Head</th>
+                  <th>Entered By &amp; Designation</th>
+                  <th>Vendor / Staff</th>
+                  <th>Mode</th>
+                  <th class="num">Amount</th>
+                  <th>Bank Export</th>
+                  <th>Remark</th>
+                  <th class="center" style="width:120px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="headExpenseLedgerBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== PM / USER WORKSPACE ==================== -->
+      <section id="pmDashboardMain" class="hidden">
+        <div class="card no-print">
+          <div class="card-header">
+            <div>
+              <h2 id="pmHeadingTitle">Program Manager Workspace</h2>
+              <div style="font-size:12.5px; color:var(--muted);" id="pmRoleSubtitle">
+                Enter program expenses &amp; monthly fixed staff salary for your assigned projects
+              </div>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+              <select id="pmProjectSelect" style="padding:7px 11px; border-radius:8px; border:1px solid var(--border); font-weight:700;"></select>
+              <select id="pmQuarterFilter" style="padding:7px 11px; border-radius:8px; border:1px solid var(--border); font-weight:700;">
+                <option value="ALL">All Quarters</option>
+                <option value="Q1">Q1 (Apr – Jun)</option>
+                <option value="Q2">Q2 (Jul – Sep)</option>
+                <option value="Q3">Q3 (Oct – Dec)</option>
+                <option value="Q4">Q4 (Jan – Mar)</option>
+              </select>
+              <button type="button" class="btn-outline btn-sm" id="btnPmAddVendor">+ Add Vendor</button>
+              <button type="button" class="btn-outline btn-sm" id="btnToggleRequisition">Requisition Form</button>
+              <button type="button" class="btn-outline btn-sm" id="btnExportBankExcel">Export Bank Excel</button>
+              <button type="button" class="btn-success btn-sm" id="btnPmExportExcel">Export Excel</button>
+              <button type="button" class="btn-primary btn-sm" id="btnPmExportPdf">Export PDF</button>
+            </div>
+          </div>
+
+          <div class="kpi-grid" id="pmProjectKpis"></div>
+
+          <div class="alert-warn" id="pmOverBudgetAlert">
+            <strong>Over-Budget Warning:</strong> This expense exceeds the remaining budget. Please provide a clear <strong>Remark</strong> explaining the overage or extra funding source before submitting.
+          </div>
+
+          <form id="pmExpenseForm" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px; margin-bottom:16px;">
+            <div style="font-size:13px; font-weight:700; color:var(--primary-dark); margin-bottom:10px;">
+              + Add Program / Vendor Expense Entry
+            </div>
+            <div class="form-grid">
+              <div class="field" style="margin:0;">
+                <label>Date *</label>
+                <input type="date" id="pmExpDate" required />
+              </div>
+              <div class="field" style="margin:0;">
+                <label>Budget Head / Section</label>
+                <select id="pmExpHead"></select>
+              </div>
+              <div class="field" style="margin:0;">
+                <label>Saved Vendor (Optional)</label>
+                <select id="pmVendorDropdown"></select>
+              </div>
+              <div class="field" style="margin:0;">
+                <label>Vendor / Payee Name *</label>
+                <input type="text" id="pmExpPayee" required placeholder="Select or type vendor name" />
+              </div>
+              <div class="field" style="margin:0;">
+                <label>Mode *</label>
+                <select id="pmExpMode">
+                  <option value="NEFT">NEFT</option>
+                  <option value="RTGS">RTGS</option>
+                  <option value="UPI">UPI</option>
+                  <option value="Cheque">Cheque</option>
+                  <option value="Cash">Cash</option>
+                </select>
+              </div>
+              <div class="field" style="margin:0;">
+                <label>Amount (₹) *</label>
+                <input type="number" step="0.01" min="0.01" id="pmExpAmount" required placeholder="0.00" />
+              </div>
+              <div class="field" style="margin:0;">
+                <label>Bank Account No.</label>
+                <input type="text" id="pmExpAcc" placeholder="Auto-filled or enter" />
+              </div>
+              <div class="field" style="margin:0;">
+                <label>IFSC Code</label>
+                <input type="text" id="pmExpIfsc" placeholder="Auto-filled or enter" />
+              </div>
+              <div class="field" style="margin:0;">
+                <label>Remark (Required if Over Budget)</label>
+                <input type="text" id="pmExpRemark" placeholder="Reason / extra fund note" />
+              </div>
+              <div style="display:flex; gap:6px;">
+                <button type="submit" class="btn-primary w-full">Save Expense</button>
+              </div>
+            </div>
+          </form>
+
+          <!-- SEPARATE FIXED STAFF SALARY & PAYROLL SECTION (PM) -->
+          <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:14px; margin-bottom:16px;">
+            <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px;">
+              <div>
+                <div style="font-size:14px; font-weight:800; color:var(--primary-dark);">
+                  Fixed Staff Salary &amp; Monthly Payroll (PF / CTC / Leave)
+                </div>
+                <div style="font-size:12px; color:var(--muted);">
+                  Add fixed staff once, select month (auto-loads previous month), update Present Days or Accounts Final CTC, and post to Project Expenses
+                </div>
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                <label style="font-size:12px; font-weight:700;">Month:</label>
+                <input type="month" id="pmSalaryMonth" value="2026-11" style="padding:6px 10px; border-radius:8px; border:1px solid var(--border); font-size:13px;" />
+                <select id="pmSalaryHeadSelect" style="padding:6px 10px; border-radius:8px; border:1px solid var(--border); font-size:12.5px;"></select>
+                <button type="button" class="btn-outline btn-sm" id="btnPmAddStaff">+ Add Fixed Staff</button>
+                <button type="button" class="btn-success btn-sm" id="btnPmPostMonthlySalary">Post Monthly Salary to Expense</button>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Emp ID</th>
+                    <th>Employee &amp; Designation</th>
+                    <th class="num">Present Days</th>
+                    <th class="num">Earned Basic</th>
+                    <th class="num">HRA + Allow.</th>
+                    <th class="num">Gratuity</th>
+                    <th class="num">PF + PT</th>
+                    <th class="num">Net Pay</th>
+                    <th class="num">Accounts Final CTC</th>
+                    <th class="center">Status</th>
+                    <th class="center" style="width:120px;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="pmStaffSalaryBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Budget Head</th>
+                  <th>Vendor / Staff</th>
+                  <th>Mode</th>
+                  <th class="num">Amount</th>
+                  <th class="center">Bank Export</th>
+                  <th>Remark</th>
+                  <th class="center" style="width:85px;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="pmExpenseTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card no-print">
+          <div class="card-header">
+            <h3>Project Budget vs. Actual Expense (Including Staff Salary)</h3>
+            <div style="display:flex; gap:6px;">
+              <button type="button" class="btn-primary btn-sm pm-chart-switch" data-type="bar">Bar Chart</button>
+              <button type="button" class="btn-outline btn-sm pm-chart-switch" data-type="doughnut">Head Breakdown</button>
+            </div>
+          </div>
+          <div class="chart-box">
+            <canvas id="pmAnalyticsChart"></canvas>
+          </div>
+        </div>
+
+        <!-- OPTIONAL REQUISITION FORM (A4 PORTRAIT, EDITABLE HEADING, PAYMENT SELECTOR, DYNAMIC ROWS) -->
+        <div class="card hidden" id="requisitionSection">
+          <div class="card-header no-print">
+            <div>
+              <h3>New Order Requisition Form (A4 Portrait)</h3>
+              <div style="font-size:12px; color:var(--muted);">Select specific pending payments to auto-fill, or enter items manually below</div>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+              <button type="button" class="btn-outline btn-sm" id="btnToggleReqPaymentPicker">Select Payments to Load</button>
+              <button type="button" class="btn-outline btn-sm" id="btnAddReqRow">+ Add Row</button>
+              <button type="button" class="btn-primary btn-sm" id="btnPrintRequisition">Print / Save A4 PDF</button>
+            </div>
+          </div>
+
+          <!-- PAYMENT SELECTION PANEL FOR REQUISITION -->
+          <div class="req-selector-box no-print" id="reqPaymentPickerBox">
+            <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px;">
+              <strong style="font-size:13px; color:var(--primary-dark);">Select Project Payments / Expenses for Requisition</strong>
+              <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+                <select id="reqPaymentFilter" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); font-size:12px;">
+                  <option value="PENDING">Pending / Not Exported Only</option>
+                  <option value="ALL">All Project Payments</option>
+                </select>
+                <button type="button" class="btn-success btn-sm" id="btnLoadSelectedToReq">Load Selected into Form</button>
+                <button type="button" class="btn-outline btn-sm" id="btnClearReqForm">Reset Form</button>
+              </div>
+            </div>
+            <div class="table-wrap" style="max-height:190px; overflow-y:auto;">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="center" style="width:40px;"><input type="checkbox" id="reqSelectAllCb" title="Select / Deselect All" /></th>
+                    <th>Date</th>
+                    <th>Vendor / Payee</th>
+                    <th>Budget Head</th>
+                    <th>Mode</th>
+                    <th class="num">Amount</th>
+                    <th class="center">Bank Status</th>
+                  </tr>
+                </thead>
+                <tbody id="reqPaymentPickerBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="req-sheet" id="requisitionPrintable">
+            <div style="text-align:center; margin-bottom:16px;">
+              <input type="text" id="reqOrgHeading" class="req-editable-title" style="text-align:center; margin:0 auto; display:block;" value="Alembic Foundation, Vadodara" title="Click to edit heading" />
+              <input type="text" id="reqOrgSubHeading" class="req-editable-sub" style="text-align:center; margin:2px auto 0; display:block;" value="(A CSR Initiative of Alembic Group)" title="Click to edit sub-heading" />
+              <div style="font-size:15px; font-weight:800; text-decoration:underline; margin-top:8px;">New Order Requisition Form</div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:flex-end; gap:24px; margin-bottom:14px;">
+              <div style="flex:1; max-width:360px;">
+                <div style="font-weight:700; margin-bottom:4px;">To</div>
+                <select id="reqVendorSelect" class="req-line-input no-print" style="margin-bottom:6px;">
+                  <option value="">-- Select Vendor --</option>
+                </select>
+                <input type="text" id="reqToInput" class="req-line-input" placeholder="___________________________" />
+              </div>
+              <div style="white-space:nowrap; display:flex; align-items:center; gap:8px;">
+                <label for="reqDateInput" style="font-weight:700;">Date</label>
+                <input type="date" id="reqDateInput" class="req-line-input" style="width:155px;" />
+              </div>
+            </div>
+
+            <table class="req-table">
+              <thead>
+                <tr>
+                  <th style="width:65px;" class="center">Sr. No.</th>
+                  <th style="width:20%;" class="center">Product</th>
+                  <th class="center">Description</th>
+                  <th style="width:95px;" class="center">Quantity</th>
+                  <th style="width:105px;" class="center">Price (RS)</th>
+                  <th style="width:115px;" class="center">Total (RS)</th>
+                  <th style="width:65px;" class="center no-print">Action</th>
+                </tr>
+              </thead>
+              <tbody id="reqRowsBody"></tbody>
+              <tfoot>
+                <tr class="total-row">
+                  <td colspan="5" style="text-align:right; font-weight:800;">Total (RS)</td>
+                  <td class="num" id="reqGrandTotal">₹0</td>
+                  <td class="no-print"></td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <div style="display:grid; grid-template-columns:245px 14px 1fr; row-gap:10px; align-items:center; margin-top:16px; font-size:13px;">
+              <span style="font-weight:700;">Project Name</span>
+              <span style="text-align:center; font-weight:700;">:</span>
+              <input type="text" id="reqProjectName" class="req-line-input" />
+
+              <span style="font-weight:700;">Payment Head</span>
+              <span style="text-align:center; font-weight:700;">:</span>
+              <input type="text" id="reqPaymentHead" class="req-line-input" />
+
+              <span style="font-weight:700;">Payment Mode (Cash/Cheque/NEFT)</span>
+              <span style="text-align:center; font-weight:700;">:</span>
+              <input type="text" id="reqPaymentMode" class="req-line-input" value="NEFT" />
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:28px; margin-top:42px; text-align:center; font-size:12.5px; font-weight:700;">
+              <div>
+                <div style="border-bottom:1px solid #334155; height:22px; margin-bottom:6px;"></div>
+                <div>Name &amp; Signature of the<br />Person Initiating the Order</div>
+              </div>
+              <div>
+                <div style="border-bottom:1px solid #334155; height:22px; margin-bottom:6px;"></div>
+                <div>Section Head</div>
+              </div>
+              <div>
+                <div style="border-bottom:1px solid #334155; height:22px; margin-bottom:6px;"></div>
+                <div>Sanctioned</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ==================== MODAL: SELECT PAYMENTS FOR BANK EXCEL EXPORT ==================== -->
+  <div class="modal-backdrop" id="bankExportModal">
+    <div class="modal modal-lg">
+      <div class="modal-head">
+        <h3 style="margin:0;">Select Payments for Bank Excel Export</h3>
+        <button class="btn-outline btn-sm" data-close="bankExportModal">✕</button>
+      </div>
+
+      <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px; background:#f8fafc; padding:10px 12px; border-radius:8px; border:1px solid #e2e8f0;">
+        <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+          <label style="font-size:12px; font-weight:700;">Show:</label>
+          <select id="bankExportFilter" style="padding:5px 9px; border-radius:6px; border:1px solid var(--border); font-size:12.5px;">
+            <option value="PENDING">Pending (Not Exported) Only</option>
+            <option value="ALL">All Payments (Pending + Already Exported)</option>
+          </select>
+          <button type="button" class="btn-outline btn-sm" id="btnBankSelectPending">Select All Pending</button>
+          <button type="button" class="btn-outline btn-sm" id="btnBankClearSelection">Clear All</button>
+        </div>
+        <div id="bankExportSummaryBadge" class="badge badge-blue">0 Selected • ₹0</div>
+      </div>
+
+      <div class="table-wrap" style="max-height:330px; overflow-y:auto; margin-bottom:12px;">
+        <table>
+          <thead>
+            <tr>
+              <th class="center" style="width:40px;"><input type="checkbox" id="bankExportSelectAllCb" /></th>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Payee / Staff</th>
+              <th>Account No.</th>
+              <th>IFSC</th>
+              <th>Mode</th>
+              <th class="num">Amount</th>
+              <th class="center">Export Status</th>
+            </tr>
+          </thead>
+          <tbody id="bankExportTableBody"></tbody>
+        </table>
+      </div>
+
+      <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px;">
+        <label style="display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; cursor:pointer;">
+          <input type="checkbox" id="chkMarkBankExported" checked />
+          Mark selected entries as "Exported" after downloading Excel (prevents duplicate export next time)
+        </label>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn-outline" data-close="bankExportModal">Cancel</button>
+          <button type="button" class="btn-success" id="btnConfirmBankExcelDownload">Download Selected Bank Excel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: ADD / EDIT FINANCIAL YEAR ==================== -->
+  <div class="modal-backdrop" id="fyModal">
+    <div class="modal" style="max-width:440px;">
+      <div class="modal-head">
+        <h3 id="fyModalTitle">Edit Financial Year</h3>
+        <button class="btn-outline btn-sm" data-close="fyModal">✕</button>
+      </div>
+      <form id="fyModalForm">
+        <input type="hidden" id="fyModalMode" />
+        <div class="field">
+          <label>Financial Year Name *</label>
+          <input type="text" id="fyNameInput" required placeholder="e.g., FY 2026-27 or FY 2027-28" />
+        </div>
+        <div class="field">
+          <label>Status *</label>
+          <select id="fyStatusInput">
+            <option value="ACTIVE">ACTIVE (Running Budget)</option>
+            <option value="ARCHIVED">ARCHIVED (Previous Year)</option>
           </select>
         </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn-outline" data-close="fyModal">Cancel</button>
+          <button type="submit" class="btn-primary">Save Financial Year</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
-        <!-- Grouped Albums Container -->
-        <div id="galleryAlbumsContainer">
-          <div style="text-align:center;padding:32px;color:#64748b;">Loading gallery...</div>
+  <!-- ==================== MODAL: RESET / CHANGE PASSWORD ==================== -->
+  <div class="modal-backdrop" id="resetPassModal">
+    <div class="modal">
+      <div class="modal-head">
+        <h3>Reset / Change Password</h3>
+        <button class="btn-outline btn-sm" data-close="resetPassModal">✕</button>
+      </div>
+      <form id="resetPassForm">
+        <div class="field">
+          <label>Registered Email ID *</label>
+          <input type="email" id="rpEmail" required />
+        </div>
+        <div class="field">
+          <label>Current Password *</label>
+          <input type="password" id="rpOldPass" required />
+        </div>
+        <div class="field">
+          <label>New Password *</label>
+          <input type="password" id="rpNewPass" required minlength="4" />
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn-outline" data-close="resetPassModal">Cancel</button>
+          <button type="submit" class="btn-primary">Update Password</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: ADD / EDIT VENDOR ==================== -->
+  <div class="modal-backdrop" id="vendorModal">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="vendorModalTitle">Add Vendor / Payee</h3>
+        <button class="btn-outline btn-sm" data-close="vendorModal">✕</button>
+      </div>
+      <form id="vendorForm">
+        <input type="hidden" id="vmEditId" />
+        <div class="field">
+          <label>Vendor / Payee Name *</label>
+          <input type="text" id="vmName" required placeholder="e.g., Shree Sai Traders" />
+        </div>
+        <div class="field">
+          <label>Type *</label>
+          <select id="vmType">
+            <option value="Vendor">Vendor</option>
+            <option value="Staff / Coordinator">Staff / Coordinator</option>
+            <option value="Service Provider">Service Provider</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Linked Project *</label>
+          <select id="vmProjectId" required></select>
+        </div>
+        <div class="field">
+          <label>Contact / Category</label>
+          <input type="text" id="vmContact" placeholder="e.g., Stationery / Transport / Phone" />
+        </div>
+        <div class="field">
+          <label>Bank Account No. *</label>
+          <input type="text" id="vmAcc" required placeholder="Enter bank account number" />
+        </div>
+        <div class="field">
+          <label>IFSC Code *</label>
+          <input type="text" id="vmIfsc" required placeholder="e.g., HDFC0000033" />
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn-outline" data-close="vendorModal">Cancel</button>
+          <button type="submit" class="btn-primary">Save Vendor</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: ADD / EDIT FIXED STAFF & CTC DETAILS ==================== -->
+  <div class="modal-backdrop" id="staffModal">
+    <div class="modal modal-lg">
+      <div class="modal-head">
+        <h3 id="staffModalTitle">Add / Edit Fixed Staff &amp; CTC Structure</h3>
+        <button class="btn-outline btn-sm" data-close="staffModal">✕</button>
+      </div>
+      <form id="staffForm">
+        <input type="hidden" id="sfEditId" />
+        <div class="sal-grid">
+          <div class="field">
+            <label>Project *</label>
+            <select id="sfProjectId" required></select>
+          </div>
+          <div class="field">
+            <label>Employee ID</label>
+            <input type="text" id="sfEmpId" placeholder="e.g., 630082" />
+          </div>
+          <div class="field">
+            <label>Employee Name *</label>
+            <input type="text" id="sfName" required placeholder="e.g., Dharmesh Nayak" />
+          </div>
+          <div class="field">
+            <label>Designation *</label>
+            <input type="text" id="sfDesignation" required placeholder="e.g., Teacher / Field Coordinator" />
+          </div>
+          <div class="field">
+            <label>UAN Number</label>
+            <input type="text" id="sfUan" placeholder="e.g., 102046651513" />
+          </div>
+          <div class="field">
+            <label>Bank Account No.</label>
+            <input type="text" id="sfAcc" placeholder="Bank Account No." />
+          </div>
+          <div class="field">
+            <label>IFSC Code</label>
+            <input type="text" id="sfIfsc" placeholder="e.g., BARB0KANROA" />
+          </div>
+          <div class="field">
+            <label>Month Days (Standard)</label>
+            <input type="number" step="0.5" min="1" max="31" id="sfBaseDays" value="30" />
+          </div>
+          <div class="field">
+            <label>Present Days (This Month)</label>
+            <input type="number" step="0.5" min="0" max="31" id="sfPresentDays" value="30" />
+          </div>
+          <div class="field">
+            <label>Full Month BASIC (₹) *</label>
+            <input type="number" step="0.01" id="sfBasic" required value="0" />
+          </div>
+          <div class="field">
+            <label>Full Month HRA (₹)</label>
+            <input type="number" step="0.01" id="sfHra" value="0" />
+          </div>
+          <div class="field">
+            <label>Full Month LTA (₹)</label>
+            <input type="number" step="0.01" id="sfLta" value="0" />
+          </div>
+          <div class="field">
+            <label>Special Allowance (₹)</label>
+            <input type="number" step="0.01" id="sfSpecial" value="0" />
+          </div>
+          <div class="field">
+            <label>Supplementary Allow. (₹)</label>
+            <input type="number" step="0.01" id="sfSupp" value="0" />
+          </div>
+          <div class="field">
+            <label>Gratuity (₹)</label>
+            <input type="number" step="0.01" id="sfGratuity" value="0" />
+          </div>
+          <div class="field">
+            <label>PF 12% (₹)</label>
+            <input type="number" step="0.01" id="sfPf" value="0" />
+          </div>
+          <div class="field">
+            <label>Prof. Tax / PT (₹)</label>
+            <input type="number" step="0.01" id="sfPt" value="200" />
+          </div>
+          <div class="field">
+            <label>Accounts Final CTC Override (₹)</label>
+            <input type="number" step="0.01" id="sfFinalCtc" placeholder="Auto-calculated or enter Accounts final" />
+          </div>
         </div>
 
+        <div id="sfLiveCalcBanner" style="background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:10px 12px; margin:10px 0 14px; font-size:13px;">
+          Calculated Gross: <strong>₹0</strong> | Net Pay: <strong>₹0</strong> | Auto CTC: <strong>₹0</strong>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn-outline" data-close="staffModal">Cancel</button>
+          <button type="submit" class="btn-primary">Save Staff Salary Profile</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: SAFE DELETE FINANCIAL YEAR ==================== -->
+  <div class="modal-backdrop" id="safeFyDeleteModal">
+    <div class="modal" style="max-width:460px;">
+      <div class="modal-head">
+        <h3 style="color:var(--danger); margin:0;">⚠️ Delete Financial Year</h3>
+        <button class="btn-outline btn-sm" data-close="safeFyDeleteModal">✕</button>
+      </div>
+      <div id="fyDelStep1Body">
+        <p id="fyDelStep1Msg" style="font-size:14px; margin:0 0 16px;"></p>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn-outline" data-close="safeFyDeleteModal">Cancel</button>
+          <button type="button" class="btn-danger" id="btnFyDelStep1Next">Continue</button>
+        </div>
+      </div>
+      <div id="fyDelExportBody" class="hidden">
+        <p style="font-size:13.5px; margin:0 0 10px;">
+          Is FY mein data maujood hai. Delete karne se pehle kya aap data export karna chahte hain?
+        </p>
+        <div class="field">
+          <label>Format</label>
+          <select id="fyDelExportFormat">
+            <option value="EXCEL">Excel (.xlsx)</option>
+            <option value="JSON">JSON (.json)</option>
+          </select>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn-outline" id="btnFyDelExportNo">No</button>
+          <button type="button" class="btn-success" id="btnFyDelExportYes">Yes, Export</button>
+        </div>
+      </div>
+      <div id="fyDelStep2Body" class="hidden">
+        <p id="fyDelStep2Msg" style="font-size:13.5px; color:var(--danger); font-weight:600; margin:0 0 16px;"></p>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn-outline" data-close="safeFyDeleteModal">Cancel</button>
+          <button type="button" class="btn-danger" id="btnFyDelFinalConfirm">Yes, Delete FY</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Full-Screen Theater Lightbox Modal -->
-  <div id="galleryLightboxModal" class="modal" style="z-index:9999;background:rgba(2,6,23,0.92);">
-    <div class="modal-card" style="max-width:1120px;width:96vw;background:#0f172a;color:#fff;border:1px solid #1e293b;border-radius:16px;overflow:hidden;">
-      <div class="modal-head" style="background:#020617;border-bottom:1px solid #1e293b;padding:14px 20px;">
-        <div>
-          <h3 id="lbTitle" style="color:#fff;margin:0;font-size:1.15rem;">Photo Title</h3>
-          <small id="lbMeta" style="color:#93c5fd;font-size:0.82rem;"></small>
-        </div>
-        <button class="close-btn" onclick="closeLightboxModal()" style="color:#fff;font-size:1.3rem;">✕</button>
+  <!-- ==================== MODAL: CUSTOM DELETE CONFIRMATION POPUP ==================== -->
+  <div class="modal-backdrop" id="confirmDeleteModal">
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-head">
+        <h3 style="color:var(--danger); margin:0;">⚠️ Confirm Delete</h3>
+        <button class="btn-outline btn-sm" data-close="confirmDeleteModal">✕</button>
       </div>
-      <div class="modal-body" style="text-align:center;padding:18px;background:#090d16;">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
-          <button type="button" class="btn btn-light" onclick="stepLightbox(-1)" style="padding:10px 14px;font-weight:800;border-radius:10px;">◀ Prev</button>
-          <img id="lbImage" src="" alt="Preview" style="max-height:74vh;max-width:82vw;object-fit:contain;border-radius:12px;box-shadow:0 12px 35px rgba(0,0,0,0.65);">
-          <button type="button" class="btn btn-light" onclick="stepLightbox(1)" style="padding:10px 14px;font-weight:800;border-radius:10px;">Next ▶</button>
-        </div>
-        <div id="lbCounter" style="margin-top:12px;font-size:0.88rem;color:#e2e8f0;font-weight:600;"></div>
+      <p id="confirmDeleteMessage" style="margin:0 0 18px; color:var(--text); font-size:14px;">
+        Are you sure you want to delete this item?
+      </p>
+      <div style="display:flex; justify-content:flex-end; gap:8px;">
+        <button type="button" class="btn-outline" data-close="confirmDeleteModal">Cancel</button>
+        <button type="button" class="btn-danger" id="btnConfirmDeleteProceed">Yes, Delete</button>
       </div>
     </div>
   </div>
 
-<!-- PROFILE PRINT FILTER MODAL -->
-<div class="modal" id="profilePrintFilterModal">
-  <div class="modal-box">
-    <h3>🖨️ Print Profile (Filter)</h3>
-    <p style="font-size:0.85rem;color:var(--muted);margin-bottom:15px;">Select date range for Health & Counselling records.</p>
-    <div style="margin-bottom:10px;">
-      <label style="font-size:0.8rem;font-weight:700;">From Date</label>
-      <input type="date" id="printFromDate" style="margin-bottom:10px;"/>
-    </div>
-    <div style="margin-bottom:15px;">
-      <label style="font-size:0.8rem;font-weight:700;">To Date</label>
-      <input type="date" id="printToDate"/>
-    </div>
-    <div style="display:flex;gap:10px;justify-content:flex-end">
-      <button class="btn" style="background:#e5e7eb;color:#374151" onclick="document.getElementById('profilePrintFilterModal').classList.remove('show')">Cancel</button>
-      <button class="btn btn-primary" onclick="executeProfilePrint()">🖨️ Print Now</button>
-    </div>
-  </div>
-</div>
-
-<!-- PRINT / EXPORT MODAL -->
-<div class="modal" id="printModal">
-  <div class="modal-box modal-large" style="max-width:740px;">
-    <div class="modal-header"><h3>🖨️ Print / Export Report</h3><button class="modal-close" onclick="document.getElementById('printModal').classList.remove('show')">×</button></div>
-    <div class="modal-body">
-      <div class="print-options-grid">
-        <div class="print-section">
-          <h5>👦 Children List Details</h5>
-          <label><input type="checkbox" class="print-child-opt" value="basic" checked> Basic Info (ID, Name, Category, Age, Gender)</label>
-          <label><input type="checkbox" class="print-child-opt" value="school"> School Info (School, Class, Medium)</label>
-          <label><input type="checkbox" class="print-child-opt" value="guardian"> Guardian Info (Name, Relation, Mobile, Address)</label>
-          <label><input type="checkbox" class="print-child-opt" value="bank"> Bank Details (Holder, Bank, Branch, Acc, IFSC)</label>
-          <label><input type="checkbox" class="print-child-opt" value="aadhar"> Aadhar Card No</label>
-          <hr style="margin:10px 0;border-color:#e5e7eb;">
-          <label><input type="radio" name="printChildStatus" value="active" checked> Only Active Children</label>
-          <label><input type="radio" name="printChildStatus" value="inactive"> Only Inactive Children</label>
-          <label><input type="radio" name="printChildStatus" value="all"> All Children</label>
-        </div>
-        <div class="print-section">
-          <h5>👨‍🏫 Staff List Details</h5>
-          <label><input type="radio" name="printStaff" value="full" checked> Full Details (Role, Shift, Contact, Bank, IFSC)</label>
-          <label><input type="radio" name="printStaff" value="basic"> Basic & Contact Only</label>
-          <label><input type="radio" name="printStaff" value="none"> Don't Print</label>
-          <hr style="margin:10px 0;border-color:#e5e7eb;">
-          <label><input type="radio" name="printStaffStatus" value="active" checked> Only Active Staff</label>
-          <label><input type="radio" name="printStaffStatus" value="all"> All Staff</label>
-        </div>
+  <!-- ==================== MODAL: EDIT EXPENSE (CSR HEAD) ==================== -->
+  <div class="modal-backdrop" id="editExpenseModal">
+    <div class="modal">
+      <div class="modal-head">
+        <h3>Edit Expense Entry</h3>
+        <button class="btn-outline btn-sm" data-close="editExpenseModal">✕</button>
       </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn" style="background:#e5e7eb;color:#374151" onclick="document.getElementById('printModal').classList.remove('show')">Cancel</button>
-      <button class="btn btn-ok" onclick="executeExcel()">📊 Download Excel (CSV)</button>
-      <button class="btn btn-primary" onclick="executePrint()">🖨️ Print Now</button>
+      <form id="editExpenseForm">
+        <input type="hidden" id="eeId" />
+        <div class="field">
+          <label>Date *</label>
+          <input type="date" id="eeDate" required />
+        </div>
+        <div class="field">
+          <label>Budget Head / Section</label>
+          <select id="eeHeadId"></select>
+        </div>
+        <div class="field">
+          <label>Vendor / Payee Name *</label>
+          <input type="text" id="eePayee" required />
+        </div>
+        <div class="field">
+          <label>Payment Mode *</label>
+          <select id="eeMode">
+            <option value="NEFT">NEFT</option>
+            <option value="RTGS">RTGS</option>
+            <option value="UPI">UPI</option>
+            <option value="Cheque">Cheque</option>
+            <option value="Cash">Cash</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Amount (₹) *</label>
+          <input type="number" step="0.01" min="0.01" id="eeAmount" required />
+        </div>
+        <div class="field">
+          <label>Bank Export Status</label>
+          <select id="eeBankExported">
+            <option value="false">Pending (Not Exported)</option>
+            <option value="true">Exported</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Remark</label>
+          <input type="text" id="eeRemark" />
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn-outline" data-close="editExpenseModal">Cancel</button>
+          <button type="submit" class="btn-primary">Update Expense</button>
+        </div>
+      </form>
     </div>
   </div>
-</div>
 
-<!-- Hidden Print Area -->
-<div id="printArea" style="display:none;padding:20px;background:white;"></div>
+  <!-- ==================== MODAL: ADD / EDIT PROJECT OR BUDGET HEAD ==================== -->
+  <div class="modal-backdrop" id="budgetModal">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="budgetModalTitle">Edit Budget Item</h3>
+        <button class="btn-outline btn-sm" data-close="budgetModal">✕</button>
+      </div>
+      <form id="budgetModalForm">
+        <input type="hidden" id="bmMode" />
+        <input type="hidden" id="bmTargetId" />
+        <input type="hidden" id="bmLogoDataUrl" />
+        <div class="field" id="bmThemeWrap">
+          <label>Theme</label>
+          <input type="text" id="bmTheme" placeholder="e.g., 1. Health" />
+        </div>
+        <div class="field">
+          <label>Sr. No. / Code *</label>
+          <input type="text" id="bmCode" required />
+        </div>
+        <div class="field">
+          <label>Particulars / Name *</label>
+          <input type="text" id="bmName" required />
+        </div>
+        <div class="field">
+          <label>Proposed Budget (₹) *</label>
+          <input type="number" step="0.01" id="bmAmount" required />
+        </div>
+        <div class="field" id="bmLogoWrap">
+          <label>Project Logo (Saved with Project / Budget)</label>
+          <input type="file" id="bmLogoFile" accept="image/*" />
+          <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+            <img id="bmLogoPreview" src="" alt="Project Logo Preview" class="proj-logo-thumb hidden" />
+            <button type="button" class="btn-outline btn-sm hidden" id="btnClearBmLogo">Remove Logo</button>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn-outline" data-close="budgetModal">Cancel</button>
+          <button type="submit" class="btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
+  <!-- ==================== MODAL: ADD / EDIT USER CREDENTIALS & DESIGNATION ==================== -->
+  <div class="modal-backdrop" id="pmUserModal">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="pmUserModalTitle">User Account Credentials</h3>
+        <button class="btn-outline btn-sm" data-close="pmUserModal">✕</button>
+      </div>
+      <form id="pmUserForm">
+        <input type="hidden" id="pmEditUid" />
+        <div class="field">
+          <label>Name *</label>
+          <input type="text" id="pmFullName" required placeholder="e.g., Nida Rathore" />
+        </div>
+        <div class="field">
+          <label>Designation *</label>
+          <input type="text" id="pmDesignation" required list="designationSuggestions" placeholder="e.g., Program Manager / Asst. Manager / Office Receipt" />
+          <datalist id="designationSuggestions">
+            <option value="CSR Head"></option>
+            <option value="Program Manager"></option>
+            <option value="Assistant Manager"></option>
+            <option value="Office Receipt"></option>
+            <option value="Project Coordinator"></option>
+          </datalist>
+        </div>
+        <div class="field">
+          <label>Email ID *</label>
+          <input type="email" id="pmEmailInput" required placeholder="e.g., nida.rathore@alembic.co.in" />
+        </div>
+        <div class="field">
+          <label>Password *</label>
+          <input type="text" id="pmPassword" required value="Admin@123" />
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn-outline" data-close="pmUserModal">Cancel</button>
+          <button type="submit" class="btn-primary">Save Account</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="app.js"></script>
 </body>
 </html>
